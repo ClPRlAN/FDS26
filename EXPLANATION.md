@@ -1,234 +1,541 @@
-# Understanding the industry classification project
+# A guide to understanding and explaining the project
 
-Read the notebook from top to bottom. Its printed results and plots describe the actual run; these notes explain the ideas behind them. A validation result is an estimate on the supplied data, not a guarantee of the professor's private-test score.
+This is the study guide. `industry_classification.ipynb` is the clean notebook to run and submit; its annotated version connects the code to the ideas explained here. The aim is to understand the sequence **data → model → prediction → evaluation**, rather than memorize answers.
 
-## 1. What the data represents
+AI assistance was used to prepare the project. This guide is intended to help you explain the choices independently and verify them. Run the code, inspect the results and describe the limitations in your own words. The historical figures below are not a new execution on the real datasets.
 
-A **variable** is a name that refers to a value, such as a number, a table, or a trained model. Assigning `x = 3` gives the name `x` the value `3`. A function accepts inputs and returns an output; for example, a scoring function accepts predictions and returns a number.
+### Where to start: five key concepts
 
-A NumPy **array** stores values in a regular shape. A vector is a one-dimensional array; a matrix is a two-dimensional array. If there are `n` companies and `d` embedding coordinates, the feature matrix has shape `(n, d)`. The industry labels and predictions have shape `(n,)`: one value per company. Rows must stay in the same company order when features, labels, and predictions are compared.
+Study these in this order before focusing on Python details:
 
-A pandas **DataFrame** is a table with named columns. Here, a row describes a company. The company ID links its business-description data to its financial information; it is an identifier, not a meaningful numerical feature.
+1. **Splits and leakage (§5):** draw the four subsets and explain why they have different roles.
+2. **LR, k-NN and PCA (§9–12):** explain what each method learns, then reason about increasing C, k or the number of components.
+3. **Metrics and scoring (§13 and §17):** calculate a small F1 example and a Brier example; explain why changing confidence does not change F1.
+4. **Financial data, ranks and p-values (§14–15):** use a short array to compare a central value, an extreme value and a missing value; explain what these scores cannot establish.
+5. **Calibrating correctness (§16–18):** explain the new binary target and reason about a group with confidence 0.9 but accuracy 0.7.
 
-An **embedding** is a vector of numbers representing the meaning of a company's business description. Descriptions with similar meaning often have nearby vectors. Individual coordinates do not have simple labels such as “manufacturing” or “retail.” The supplied embeddings each have **768 coordinates**; we use them directly as features.
+Then use the oral questions (§22) to check your reasoning. Change the numbers in an example and reconstruct the answer. This is a better test of understanding than recalling its wording.
 
-The **target** is the known industry. The model learns a relationship between the features and that target. At prediction time, the target is unknown and must never be included among the input features.
+## 1. The project in one minute
 
-The main dataset contains **31,706 records, 31,705 unique company IDs, and 25 industries**. One company has two different embedding records with the same industry. There are 4,578 repeated embedding strings, including 17 embedding groups with conflicting industry labels. Identical text features can therefore correspond to different targets. Matching financial IDs are available for 29,400 main records; that does not mean every financial ratio is present.
+> I want to predict a company's industry from its business description, which is already represented by a numerical vector called an embedding. I compare logistic regression and k-nearest neighbors. Logistic regression uses the original embeddings; for k-NN, I reduce their dimensionality with PCA. I separate the companies used to fit classifiers, choose the ensemble weight, learn confidence and evaluate the result. I combine the models' probabilities and use another small model to estimate how likely the prediction is to be correct. This estimate also considers whether the company's finances resemble those of the predicted industry. I evaluate both classification and confidence without using private-test labels.
 
-## 2. Why we separate the companies
+Keep three ideas separate:
 
-The notebook first reserves approximately 10% of company-ID groups for validation. It splits the remaining groups into fitting and development portions, then divides development equally into tuning and calibration. Each part has a separate job:
+- **Prediction:** which known industry is the most plausible?
+- **Confidence:** how plausible is it that this particular prediction is correct?
+- **Evaluation:** how well do these estimates work on companies held aside?
 
-| Part | Approximate share | Records in this split | Purpose |
-|---|---:|---:|---|
-| Fitting | 81% | 25,681 | Fit classifiers, PCA, and financial reference profiles. |
-| Tuning | 4.5% | 1,427 | Choose model settings and the ensemble weight. |
-| Calibration | 4.5% | 1,427 | Learn confidence after the industry classifier is fixed. |
-| Final validation | 10% | 3,171 | Evaluate the completed system. |
+Financial information changes confidence, rather than the industry chosen by the ensemble. Therefore, the raw, text-calibrated and financial-calibrated variants have identical predicted labels and F1; their Brier scores differ.
 
-Because a company group can contain multiple records, row percentages need not match exactly. The broader “training portion” includes fitting, tuning, and calibration records.
+## 2. The machine learning problem
 
-The **fitting set** teaches the classifiers and PCA. Financial reference profiles also use this set. These fitted parts must not learn from validation companies.
+This is **supervised multiclass classification**. It is supervised because the development data contains the target, `industry`. It is multiclass because each record belongs to one of several industries. It is not multilabel classification: the model does not assign several industries to one record at the same time. It is not regression on a continuous quantity: the word “regression” in *logistic regression* does not change its use as a classifier here.
 
-The **tuning set** compares development choices, including probability-voting weights. It is separate from confidence calibration so a choice made using tuning correctness does not influence the calibration targets.
+The **features** are information available when making predictions. The **target** is what we want to predict. The target cannot be a feature: that would give the model the answer it is supposed to estimate.
 
-The **calibration set** teaches the confidence adjustment. It contains companies used neither to fit the classifiers nor to choose the ensemble weight. For each company, we compare the fixed prediction with its true industry to obtain a correctness target.
+`id` links records of the same company and connects the two tables. It is not a predictive feature. The numerical difference between two IDs does not measure how similar two companies are.
 
-The **validation set** evaluates the completed prediction procedure. Its targets are used to calculate metrics, not to train the classifier or calibrator. Repeatedly choosing settings after inspecting this score makes it less honest as an estimate of performance on unseen data.
+We do not have the instructor's private test set. Good local validation does not guarantee the same private-test score or the award of bonus points.
 
-**Leakage** means allowing information from an evaluation company to influence the fitted system. Examples include fitting PCA on all companies, choosing a confidence transformation from validation correctness, or placing copies of the same company in both fitting and validation. Financial reference profiles follow the same separation rules as text preprocessing.
+## 3. Files, tables and array shapes
 
-`GroupShuffleSplit` keeps all records with the same company ID in one split. The two records of the repeated company are retained together, preventing the model from learning from that company and then being evaluated on another record of it. The financial merge uses `validate='many_to_one'`: multiple main records may match one aggregated financial record, while duplicate financial IDs would fail the check.
+Run the notebook from the project directory with the original datasets:
 
-A fixed `random_state=42` makes the splits repeatable. The grouping is by company ID, not by embedding string, and the split is not stratified by industry. Class proportions can vary; the label assertion checks that each held-out industry has fitting examples. A rare industry gives fewer examples to learn from and a less stable performance estimate.
+```text
+data/df_train.pkl
+data/df_financials_train.pkl
+```
 
-## 3. Labels and the required plots
+The first table contains `id`, `industry` and `business_description_embedding`. The second contains `id` and three financial ratios:
 
-`LabelEncoder` maps industry names to integers, for example `"Retail" → 0`. The integers are identifiers: industry 2 is not twice industry 1. The notebook fits the mapping on fitting companies, then reuses it for tuning, calibration, validation, and probability columns. `inverse_transform` converts predicted integers back to industry names. An assertion checks that every held-out industry exists among the fitting labels.
+| Column | Basic meaning |
+| --- | --- |
+| `net_profit_margin` | Net income relative to revenue. |
+| `ebitda_margin` | EBITDA relative to revenue; this is not net profit margin. |
+| `asset_turnover` | Revenue relative to total assets. |
 
-The **class-frequency plot** shows how many companies belong to each industry. **Class imbalance** means some industries have many more examples than others. A high overall score can conceal poor performance on a small industry, so inspect per-industry results as well.
+The precise definitions depend on the dataset. EBITDA is not the same as net income or cash flow. A negative margin may represent a real loss rather than an error.
 
-**PCA**, or principal component analysis, constructs directions that preserve as much variation in the feature vectors as possible. The notebook fits **128 components on fitting embeddings**, using scikit-learn's default automatic solver choice and `random_state=42`. k-NN uses all 128; the scatterplot displays the first two, with one dot per fitting company colored by industry.
+Only open pickle files from a trusted source: the format can execute code while loading. The model does not require additional data downloads or credentials.
 
-The two-dimensional plot is a compressed view. Overlap there does not prove that industries are inseparable in the original features. Logistic regression uses the **full 768-coordinate embeddings**. The printed explained-variance totals describe how much variation two and 128 components preserve. A development comparison informed the choice of 128; it does not establish a global optimum.
+The previous execution contained 31,706 records, 31,705 distinct IDs, 25 industries and 768-coordinate embeddings. These are historical properties to check again against the actual files.
 
-## 4. The two classifiers
+| Object | Shape in the original data | Meaning |
+| --- | --- | --- |
+| `X_fit` | `(n_fit, 768)` | One feature row per record. |
+| `y_fit` | `(n_fit,)` | One encoded industry per record. |
+| `X_fit_pca` | `(n_fit, 128)` | Reduced features for k-NN. |
+| Each classifier's probabilities | `(n, 25)` | One probability per company and industry. |
+| `features_cal` | `(n_cal, 5)` | Five signals for estimating correctness. |
+| Final output | two vectors of shape `(n,)` | Industry name and confidence for each record. |
 
-**Logistic regression** learns a score for each industry from a weighted combination of input coordinates. It converts those scores into probabilities that sum to one across industries. Regularization discourages excessively large weights. Here, `C=10` controls regularization: larger `C` means weaker regularization. `max_iter=1000` limits optimization iterations; it is not a promise that the model needs or completes exactly 1,000 iterations.
+The first dimension counts rows; the second counts features or classes. `axis=1` works across the columns within a row: `argmax(axis=1)` finds each company's most probable industry. `argmax` returns the position of the maximum, rather than its value.
 
-**k-nearest neighbors**, or **k-NN**, compares a new company with fitting companies and lets nearby examples vote. This notebook uses **15 neighbors in the 128-dimensional PCA representation**. `weights='distance'` gives closer neighbors more influence. Its probabilities come from weighted neighbor votes and should not automatically be treated as reliable confidence estimates.
+Row `i` of the embeddings, target and financial data must always refer to the same company. An inconsistent order can produce incorrect results without causing a Python error.
 
-Numerical libraries are limited to two CPU threads, and k-NN uses `n_jobs=2`. These are resource choices, not evidence that a runtime target has been met. Development comparisons informed model settings; they do not prove those settings optimal for other splits or datasets.
+## 4. Embeddings and conversion
 
-Both models predict the industry with the highest probability. **Predicted probability** means the model's estimate, not certainty about the real world. A prediction with probability 0.9 can still be wrong.
+An embedding is a numerical representation of text produced by a pretrained language model. Semantically similar descriptions may have nearby vectors: for example, “produces cars” and “manufactures vehicles,” compared with “operates supermarkets.” A single coordinate does not necessarily have an interpretable label such as “bank” or “revenue”: meaning is distributed across many coordinates.
 
-The **ensemble** combines aligned probability vectors using a weighted average:
+The supplied `example_text_embeddings.ipynb` shows how to generate embeddings and illustrates cosine similarity. This project uses the provided embeddings: it does not train a language model or download a sentence transformer again. That keeps the project shorter and less expensive to run.
 
-`votes = lr_weight × proba_lr + (1 − lr_weight) × proba_knn`
+`embeddings` converts the values to a `float32` array. If the file contains a string such as `"[0.1, -0.2]"`, `ast.literal_eval` interprets it as a list. We do not use `eval`, which would execute code. If a value is already a list or array, we do not interpret it as text again.
 
-The code compares logistic-regression weights **0.25, 0.5, and 0.75** on tuning weighted F1. The selected weight is **0.25**, so logistic regression contributes 25% and k-NN 75%. Choose the industry with the largest vote. This is soft voting. The smaller weight does not mean logistic regression is unnecessary: it can still affect close decisions.
+`float32` uses four bytes per number, compared with eight for `float64`. It is a compact choice for these features; it does not mean that every internal library operation uses 32-bit arithmetic.
 
-In development, `C=1` was stronger for logistic regression on its own, while `C=10` contributed better to the ensemble. A model setting can therefore be selected for the final combination rather than its standalone ranking. All these choices precede final validation.
+The notebook **does not apply additional L2 normalization**. Its k-NN uses Euclidean distance after PCA, rather than cosine similarity. PCA centers the coordinates, but does not make every vector have length one.
 
-Agreement can provide useful evidence, but both models can learn similar mistakes. Combining models does not automatically improve a score. Financial information adjusts confidence here; it does not change the ensemble's chosen industry.
+## 5. Four subsets with four roles
 
-## 5. Financial information and cleaning
+| Subset | Approximate share of all records | Role |
+| --- | ---: | --- |
+| Fitting | 81% | Fit PCA, classifiers and financial reference profiles. |
+| Tuning | 4.5% | Choose the LR/k-NN ensemble weight. |
+| Calibration | 4.5% | Learn the relationship between confidence signals and correctness. |
+| Final validation | 10% | Evaluate the system after those choices. |
 
-Financial features include profit margins and asset turnover. They may help distinguish industries, but they may also be absent or unusual for valid reasons.
+First, we reserve about 10% for validation. Of the remaining 90%, we take about 90% for fitting: `0.9 × 0.9 = 0.81`. The remaining 9% is divided equally between tuning and calibration. `df_train` means the whole 90% development portion, rather than only the rows used to fit the base classifiers.
 
-- A **missing value** means information is unavailable; it does not mean zero profit or zero turnover.
-- **Infinity** is not a usable finite observation. Treat it as unavailable before calculating statistics.
-- An **outlier** is far from typical values. It may be a real company or a data issue. Robust transformations and statistics can reduce its influence.
-- A **negative margin** can represent a loss. Removing every negative value would remove valid financial information.
-- Repeated company IDs are resolved before joining the tables. `groupby('id')[financial_columns].median()` gives one median per ratio and company, ignoring missing values. This prevents the join from duplicating companies, though aggregation loses distinctions between the original records.
+The helper `split(companies, size)` returns two subsets using `GroupShuffleSplit`. The percentages are approximate because the split operates on groups and the number of rows is an integer. The previous execution had 25,681 fitting records, 1,427 tuning records, 1,427 calibration records and 3,171 validation records.
 
-The notebook replaces infinities with missing values, retains valid negatives, and uses per-company medians. Missing observations are excluded from financial rank calculations. Rank-based scores bound the influence of extreme magnitudes. Boxplots hide outlier dots only for readability; this does not delete data. Their symmetric logarithmic axis displays both negative and positive magnitudes.
+### Why group by ID?
 
-**Empirical financial consistency** asks whether a company's observed finances resemble fitting companies in its predicted industry. For each industry and ratio, the notebook sorts finite fitting values and retains profiles with **at least 20 observations**. A new value's percentile uses the middle rank for ties and a small offset at the extremes. Its compatibility is `2 × min(percentile, 1 − percentile)`: high near the middle, low in the tails.
+The same company may have several records. If one entered fitting and another entered validation, we would evaluate the model on a company it had already seen. `GroupShuffleSplit` keeps all rows of an ID in the same subset.
 
-Available ratios are averaged. If none are usable, compatibility is a placeholder of 0.5 and availability is 0. Availability otherwise records the fraction of the three usable ratios. This allows the confidence model to distinguish missing evidence from observed compatibility of 0.5.
+`random_state=42` makes the split repeatable. It does not automatically improve the score or make the data “more random.” The split is not stratified by industry: class proportions can change. We check that every held-out class exists in fitting because a conventional supervised classifier cannot learn an unseen class.
 
-Compatibility is supporting evidence, not a probability of correctness or a formal combined p-value. A financially unusual company can still have the correct industry, and a typical company can still be misclassified.
+### What is leakage?
 
-Likewise, a **p-value** measures how surprising data would be under a stated statistical model. It is not the probability that a predicted industry is correct. Any financial signal used to adjust confidence must demonstrate useful behavior on held-out companies.
+Leakage means using evaluation information, even indirectly, to prepare the model. It includes more than adding the target to the features. Examples:
 
-## 6. What the metrics mean
+- Fitting PCA on all companies before the split: the validation-feature distribution would influence its directions.
+- Choosing the ensemble weight with the highest validation F1, then presenting that same number as an independent evaluation.
+- Learning confidence on records already used to fit the classifiers: training errors do not represent errors on new companies.
+- Building financial profiles with validation companies or using their true industry to choose the reference profile.
 
-**Accuracy** is the fraction of companies assigned the correct industry.
+In this notebook, PCA, classifiers and profiles use fitting; the ensemble weight uses tuning; the calibrators use calibration. Results are measured on validation. The base models remain frozen after fitting: retraining them on additional data would change the system whose confidence we calibrated.
 
-To evaluate one industry, treat that industry as the positive class and all other industries as negative:
+The original validation results have already been inspected during earlier versions of the project. They should not be described as a test that has remained unseen throughout the project's history. Repeated human choices made after examining the score can also make it optimistic. The pipeline separates the operations, but does not erase that historical limitation.
 
-- **TP**, true positives: the prediction and true industry both match this industry.
-- **FP**, false positives: the prediction selects this industry, but the true industry is another one.
-- **FN**, false negatives: the true industry is this one, but the prediction selects another one.
+## 6. Preparing financial data
 
-**Precision** is `TP / (TP + FP)`: the fraction of this industry's predictions that are correct. **Recall** is `TP / (TP + FN)`: the fraction of this industry's actual records found correctly. **F1** combines them as `2 × precision × recall / (precision + recall)`. The report uses zero when a division is undefined.
+`prepare_companies(companies, financials=None)` applies the same rules during development and inference. When given a separate financial table, it:
 
-An industry's **support** is its number of true records in the evaluated set. **Weighted F1** is `sum(support_i × F1_i) / sum(support_i)`, so large industries contribute more. **Macro F1** averages industry F1 scores with equal weight and can reveal weak performance on rare ones.
+1. Converts infinite values to NaN.
+2. Groups by ID and takes the median of each available ratio.
+3. Links financial data to companies with a left join.
+4. Checks that the relationship is many-to-one.
 
-A **confusion matrix** counts true-versus-predicted industry pairs. The diagonal contains correct predictions; off-diagonal cells show confusion. In this notebook, rows are true industries and columns are predicted industries. The heatmaps normalize each true-industry row to sum to one, making rare industries visible; the printed most-confused pairs use raw counts. Compare the models' errors record by record as well as by industry.
+If companies already have financial columns and we supply a separate table, the separate table replaces those columns. We do not combine two incompatible versions. Without a separate table, we use the existing columns. Any missing ratio becomes NaN, including a ratio missing from the separate financial table, and infinite values are cleaned. A separate table still needs the `id` column to link its records.
 
-The official bonus metric is:
+`how='left'` keeps every company, including those without financial data. An inner join would remove companies with no matching financial records, changing the cases being classified. `validate='many_to_one'` prevents multiple right-hand rows from accidentally multiplying left-hand rows. `sort=False` avoids sorting companies by the join key.
 
-`score = weighted_F1 × (1 − Brier)`
+The median is less affected than the mean by one extremely large value. It is a simple way to obtain one record per company, rather than a guarantee of recovering the “true” value. If duplicate rows describe different periods, aggregation loses that information.
 
-For this assignment, the Brier score is the mean of `(confidence − correctness)²`. Correctness is 1 for a correct industry prediction and 0 for an incorrect one. Each confidence must be between 0 and 1. This formula concerns the confidence of the chosen prediction; it is not the usual full-vector multiclass Brier calculation.
+This aggregation uses only records of the same company, rather than statistics across companies or their targets. It differs from learning a global imputation value jointly from fitting and validation.
 
-A correct prediction with confidence 0.9 contributes `(0.9 − 1)² = 0.01`. An incorrect prediction with confidence 0.9 contributes `(0.9 − 0)² = 0.81`. Confident mistakes are expensive. Low confidence on correct predictions also has a cost. Weighted F1 measures classification quality, while Brier measures confidence quality.
+**NaN does not mean zero:** a zero margin is a specific observation; a missing margin is unknown. We do not remove all negative values, because a loss-making company can still be classified correctly. We do not cut all extremes, because ranks limit their influence without assuming that they are false.
 
-The old `confidence ** 6` trick belongs to a different scoring formula. Arbitrarily shrinking confidence does not guarantee a better score under this year's rule. The confidence adjustment must be learned and checked against the current scorer.
+## 7. LabelEncoder and probability alignment
 
-## 7. Calibration and human review
+`LabelEncoder` assigns an integer to each industry name, for example `Banks → 0`, `Energy → 1`, `Materials → 2`. These integers are identifiers, rather than quantities. Industry 2 is not “twice” industry 1, and their codes do not define an economic distance.
 
-**Calibration** connects reported confidence to observed correctness. Among many predictions with confidence close to 0.8, a well-calibrated system should be correct about 80% of the time. Calibration cannot be established from a single prediction.
+`fit` builds the mapping from fitting classes. `transform` reuses it on other subsets. `inverse_transform` converts predicted codes back to readable names. An assertion checks that every held-out class is known.
 
-Two binary logistic-regression calibrators learn from the **1,427 calibration records**. Their target is **1 when the fixed ensemble is correct and 0 otherwise**. These calibrators are separate models from the 25-industry classifier. The text-only calibrator uses three inputs; the financial calibrator uses all five:
+The columns of the LR and k-NN probability vectors must represent the same industries in the same order. Another assertion checks this. Adding columns with different meanings would be incorrect even if the arrays had matching shapes.
 
-1. Largest ensemble probability.
-2. Gap between the largest and second-largest probabilities.
-3. Whether the two base models agree.
-4. Financial compatibility.
-5. Fraction of usable financial ratios.
+## 8. Class imbalance
 
-The probability of class 1 is the adjusted confidence. The final validation compares raw ensemble confidence, text-calibrated confidence, and financial-calibrated confidence. These share the same industry predictions and F1; their Brier scores can differ. The financial version is the fixed inference candidate, rather than being selected by whichever validation result looks best.
+The frequency chart shows how many training companies belong to each industry. In the historical data, `Materials` had 7,570 records, or 26.5% of training; the smallest class had 160. Always choosing the largest class would give nonzero accuracy, but would fail to recognize the others.
 
-A **confidence-bin table** groups predictions into ten intervals and compares average confidence with actual accuracy in each interval. Include counts: a bin with only a few examples provides weak evidence. A point below the diagonal in the reliability plot indicates confidence greater than observed accuracy; above the diagonal indicates confidence lower than observed accuracy. Calibration and discrimination are different: a cautious model can be calibrated while still making many classification errors.
+Large classes provide more examples and contribute more to weighted F1. This does not mean that every large class is easy: semantic overlap, description quality and label errors also matter. Per-class reports and macro F1 expose weaknesses that a weighted average can hide.
 
-A **human-review flag** identifies predictions with confidence **below 0.8**. This is a starting policy, not a course requirement or an optimized threshold. It trades review workload against errors captured. Every company still receives a prediction and remains in the score. The notebook reports the fraction flagged, accuracy in each group, and how many errors the flags capture.
+We do not use `class_weight='balanced'`. It would increase the influence of small classes during training, but would not automatically improve weighted F1. We avoid adding options without a comparison. Omitting class weighting does not mean that imbalance has been “solved.”
 
-## 8. Reading the Python syntax
+## 9. PCA: 128 components for the model, two for visualization
 
-Read each expression as an operation on named values. The notebook uses these patterns:
+**Principal Component Analysis** finds orthogonal directions that capture substantial feature variance. The first captures the greatest possible variance in one direction; the second captures the greatest remaining variance while being orthogonal to the first, and so on.
 
-`=` assigns a value; `==` compares values. A colon introduces a function, loop, or condition, and indentation shows which lines belong to it. `len(...)` counts items.
+PCA is unsupervised: it does not use industry labels. Therefore, substantial variance does not necessarily mean substantial information for classification. A low-variance direction might still help distinguish similar industries.
 
-| Syntax | Meaning here |
-|---|---|
-| `import numpy as np` | Imports a package and gives it a shorter name. `pd`, `plt`, and `sns` are aliases for pandas, plotting, and seaborn. |
-| `pd.read_pickle(path)` | Loads the supplied saved DataFrame. |
-| `df.merge(..., how='left')` | Attaches finances by ID while retaining every main-data row, including rows with no financial match. |
-| `.isna()`, `np.isinf(...)`, `np.isfinite(...)` | Check for missing, infinite, or usable finite values. `np.nan` represents a missing numerical value. |
-| `def embeddings(companies):` | Defines a reusable function; `return` sends its result back to the caller. |
-| `.apply(ast.literal_eval).tolist()` | Parses each embedding string as values, then collects the lists. `np.array(..., dtype=np.float32)` builds a numerical matrix using 32-bit floating-point values. |
-| `groups=df['id']` | Tells the splitter which records belong to the same company. |
-| `next(splitter.split(...))` | Takes the first train/test index pair from the split generator. Here `n_splits=1` requests one pair. |
-| `df.iloc[train_index]` | Selects rows by integer position. Later indices refer to the DataFrame being split, such as `df_train` or `df_development`. |
-| `set(...).union(...).issubset(...)` | Collects held-out industry names and checks that all exist among fitting labels. `assert` stops if the condition is false. |
-| `model.fit(X, y)` | Learns a model from features and targets. |
-| `pca.fit_transform(X_fit)` | Learns PCA and projects fitting rows. `pca.transform(X_val)` reuses the learned projection without fitting again. |
-| `model.predict_proba(X)` | Returns one row per record and one probability column per industry. The calibrators instead have two columns: incorrect and correct. |
-| `{'Model': prediction}` | A dictionary stores values under keys; `predictions.items()` supplies each name and prediction. |
-| `profiles[industry, column]` | The key is a tuple `(industry, column)`, identifying one financial profile. |
-| `return names, confidence` | Returns a tuple of two vectors. `names, confidence = ...` unpacks it. |
-| `enumerate(le.classes_)` | Supplies each industry's integer position and name together. |
-| `mask = y_fit == label` | Creates a Boolean vector: `True` for rows matching that industry. |
-| `values[mask]` | Keeps only rows whose mask is `True`. `&` combines conditions; `~` reverses a Boolean condition. |
-| `array.shape[1]` | Reads the number of columns in a matrix; counting starts at zero. |
-| `argmax(axis=1)` | Finds the largest-probability column separately in each company row. |
-| `[f1_score(...) for weight in weights]` | A list comprehension calculates one score for each candidate weight. `weights[np.argmax(tuning_f1)]` retrieves the best-scoring weight. |
-| `np.sort(votes, axis=1)` | Sorts the probabilities within each row. `[:, -1]` takes the largest; `[:, -2]` takes the second-largest. |
-| `features[:, :3]` | All rows, columns 0, 1, and 2: the text-only confidence inputs. The upper slice bound is excluded. |
-| `np.column_stack([...])` | Places the five feature vectors side by side as a matrix. |
-| `np.searchsorted(reference, value, side=...)` | Finds insertion positions in sorted values. Left and right positions identify the span of ties. |
-| `np.divide(..., out=..., where=available > 0)` | Divides only where a ratio is available; other rows keep the supplied placeholder. |
-| `groupby('id').median()` | Groups records by company ID and summarizes each group using medians. |
-| `.loc[mask, column].dropna().to_numpy()` | Selects one industry's ratio, removes missing observations, and converts it to an array. |
-| `if len(reference) < 20: continue` | Skips a profile with insufficient observations and proceeds to the next loop iteration. |
-| `total[mask] += ...` | Adds each usable ratio's compatibility to the relevant rows. `available[mask] += 1` counts usable ratios. |
-| `predict_proba(features)[:, 1]` | Takes the calibrator's probability of class 1: the prediction being correct. |
-| `le.inverse_transform(prediction)` | Converts numerical industry codes back into names. |
+`PCA(n_components=128, random_state=42)` reduces the original embeddings from 768 to 128 coordinates. This makes k-NN distances less expensive and may remove less useful variation. The choice of 128 comes from the baseline configuration; it is not a proven global optimum.
 
-The results and plotting cells use a few additional table operations:
+`fit_transform(X_fit)` learns the mean and directions and projects fitting data. We use `transform` on other subsets so that they share the same coordinate system. A new `fit_transform` on validation would create a different transformation and use information that should be held aside.
 
-- `value_counts()` counts records per industry. `.sort_values()` orders a table or column, and `.head(5)` keeps its first five rows.
-- `results.append([...])` collects a row of scores. `pd.DataFrame(results, columns=[...])` makes a labeled results table.
-- `.T` transposes a table. `.loc[le.classes_]` retains industry rows in the desired order. `zero_division=0` gives precision/F1 a defined value when no predictions support a calculation.
-- `.reindex(report.index)` aligns industry counts with report rows before `.corr(...)` computes correlation. A correlation describes association, not cause.
-- `np.fill_diagonal(pairs.values, 0)` removes correct-count cells from the printed confusion ranking. `.stack()` lists all true/predicted pairs for sorting; it leaves the heatmap unaffected.
-- `.agg(['count', 'median'])` calculates financial observation counts and medians. Named aggregations such as `Count=('Correct', 'size')` name the output and specify the input column and operation.
-- `pd.cut(..., np.linspace(0, 1, 11))` groups confidences using 11 equally spaced boundaries, producing ten intervals. `observed=True` reports bins that contain records.
-- `plt.xlabel`, `plt.ylabel`, and `plt.title` label a plot. `plt.tight_layout()` helps labels fit; `plt.show()` displays it. `alpha` controls scatter-point transparency.
-- `perf_counter()` reads an elapsed-time clock. Subtracting the start reading measures runtime. An expression such as `f'{share:.1%}'` formats a fraction as a percentage with one decimal place.
+The scatterplot shows the first two of the 128 components because we can draw two axes. **k-NN uses all 128**, while LR uses every original coordinate. Historically, the first two retained 25.3% of variance and all 128 retained 87.6%. Those figures are neither accuracy percentages nor percentages of “information useful for the target.”
 
-For a two-dimensional array, axis 0 runs down the company rows and axis 1 runs across the columns. `np.sum(mask)` counts `True` values because they behave as 1, while `False` behaves as 0. Their mean gives a fraction. `.astype(int)` turns a correctness mask into explicit 0/1 targets.
+A separated group of same-colored points suggests structure. Overlap in two dimensions does not prove that industries are indistinguishable in the original dimensions: the projection discards information.
 
-A **generator** supplies results one at a time. The split generator supplies a pair of index arrays: positions retained for training and positions held out. `next` retrieves that pair, tuple unpacking names its two parts, and `.iloc` selects the corresponding records.
+PCA centers each coordinate. We do not use StandardScaler, whitening or additional normalization. The code should not be described as standardizing the features. Scaling is often important for variables measured in very different units; embedding coordinates have a different nature from a mixture of meters, euros and percentages.
 
-`predict_industry(companies)` returns **`(industry_names, confidence)`** in input-row order. The input needs the embedding column and all three financial columns, with unavailable financial observations represented by `NaN`. The function does not read true industry labels.
+## 10. Multiclass logistic regression
 
-## 9. Reproducibility and interpretation
+For each industry, the model combines the embedding coordinates linearly, then turns scores into probabilities using softmax:
 
-Run the notebook from a fresh kernel in cell order. Keep dataset paths, seeds, preprocessing, model settings, and package versions documented. Save the results from the actual run and avoid mixing outputs from different experiments.
+```text
+z_c = w_c · x + b_c
+p_c = exp(z_c) / sum_j exp(z_j)
+```
 
-Explain both strengths and failures. A useful result says what was evaluated, which companies were held out, and what the observed limitations are. Private-test performance, compliance with a runtime limit, and grading outcomes require their own evidence; a local validation score cannot establish them.
+`x` is the embedding, `w_c` is the industry's weight vector and `b_c` is the intercept. Probabilities are positive and sum to one across classes. The prediction takes the largest probability.
 
-## Oral-exam practice
+“Linear” describes the scores and boundaries between classes in feature space; softmax itself is not a straight line. The language model has also already transformed text into a complex representation.
 
-**Why use embeddings?** They give numerical features that summarize the meaning of the supplied company descriptions.
+LR does not maximize F1 directly. It minimizes regularized log-loss: it penalizes assigning a low probability to the true class and discourages excessively large weights. F1 is measured afterward to evaluate the decisions.
 
-**Why is the industry code not an ordinary numerical feature?** Its value only identifies a class; its numerical size has no industry meaning.
+We use `C=10` and `max_iter=1000`. `C` is inversely related to regularization strength: a larger value means less weight penalization, while a smaller value means more. `max_iter` limits optimizer iterations; it is not a number of trees or a requirement to perform exactly that many iterations. A convergence warning needs investigation rather than suppression.
 
-**Why have a calibration split?** Confidence needs to be learned from predictions on companies the classifier did not train on, while keeping the final evaluation separate.
+This is a standard, fast and compact model that can use information distributed across embeddings. It cannot represent every nonlinear boundary, and its probabilities are not automatically perfectly calibrated confidence estimates.
 
-**Why also have a tuning split?** It chooses settings and voting weights before a separate set teaches confidence, leaving validation for the completed procedure.
+## 11. k-Nearest Neighbors
 
-**Why group by company ID?** One company has two records; keeping them together prevents learning from one and evaluating on the other.
+k-NN searches for fitting companies nearest to a new one. Here it uses 15 neighbors in the 128-dimensional PCA representation. It does not learn coefficients like LR: it stores a representation of the examples and prepares neighbor search.
 
-**Does a PCA plot show everything the model sees?** No. Two components discard information, so the plot is an interpretation aid rather than a complete description of separability.
+With these parameters, distance is **Euclidean**: the square root of the sum of squared coordinate differences. It is not automatically cosine similarity. `weights='distance'` gives closer neighbors greater influence. An industry's probability is its share of the weighted vote.
 
-**How do the required classifiers differ?** Logistic regression learns feature weights; k-NN predicts from the labels of nearby training examples.
+A small `k` is very local and sensitive to noise. A large `k` makes voting more stable but can hide useful details and favor frequent classes. Fifteen is the baseline compromise, rather than a universally correct number.
 
-**Why can high accuracy hide a problem?** A large industry can dominate accuracy while a rare industry is classified poorly.
+In many dimensions, distances may become less informative and more expensive. PCA helps, but does not eliminate every dimensionality problem. k-NN's main cost may occur during prediction rather than fitting: measuring `.fit()` alone does not measure its total cost.
 
-**Why is model agreement insufficient?** The models may make correlated mistakes.
+`n_jobs=2` and `threadpool_limits(2)` limit resources used by some operations. They do not change the classifiers' definitions. Previously computed probabilities are reused in comparisons to avoid repeating neighbor searches.
 
-**Why keep negative margins?** A negative margin can be a valid loss, not a missing value or error.
+## 12. Ensemble: combining probabilities
 
-**Why is financial consistency not correctness probability?** Typical finances are only supporting evidence, and atypical companies can still have the correct industry label.
+LR uses global rules; k-NN uses local comparisons. They may make mistakes on different examples, although many errors remain shared. **Soft voting** combines their probability vectors:
 
-**What is calibration's purpose?** To improve the reliability of confidence estimates; evaluation checks whether it succeeds. In this notebook it keeps predicted industries and F1 unchanged.
+```text
+votes = lr_weight × proba_lr + (1 − lr_weight) × proba_knn
+prediction = the industry with the highest value in votes
+```
 
-**Why not reuse last year's confidence exponent?** This year's scorer penalizes confidence errors separately, so that transformation has no general justification.
+For a two-class example, LR gives `[0.8, 0.2]` and k-NN gives `[0.3, 0.7]`. With LR weight 0.25, the result is `[0.425, 0.575]`, so the second class wins. Weight 0.25 does not mean LR is correct 25% of the time: it specifies its contribution to the average.
 
-**What prevents a private-score guarantee?** The private companies and labels are unknown; local validation is an estimate rather than a promise.
+The notebook compares weights `0.25`, `0.5` and `0.75` using tuning weighted F1. The search is small and understandable; the best weight is frozen before calibration and evaluation. Historically it selected 0.25. A new run must print its own selection rather than copy the historical result.
+
+The best of three candidates is not necessarily a global optimum. We do not select on validation or optimize against the private test. An ensemble does not always improve performance: we check metrics and shared errors.
+
+## 13. Classifier metrics
+
+### Accuracy, precision, recall and F1
+
+Accuracy is the fraction of records classified correctly. To define the other metrics in a multiclass problem, consider one industry at a time as positive:
+
+- TP: belongs to the industry and is predicted as that industry.
+- FP: belongs elsewhere but is incorrectly predicted as this industry.
+- FN: belongs to this industry but is predicted elsewhere.
+
+```text
+precision = TP / (TP + FP)
+recall = TP / (TP + FN)
+F1 = 2 × precision × recall / (precision + recall)
+```
+
+Example: there are 20 actual banks, 16 are recognized, and four other companies are incorrectly called banks. TP=16, FN=4 and FP=4: precision, recall and F1 are all 0.8. If we called many additional companies banks, recall might stay high while precision fell.
+
+F1 is the harmonic mean of precision and recall: it penalizes a substantial imbalance between them. It is neither their arithmetic mean nor the percentage of correctly classified companies.
+
+### Weighted and macro F1
+
+We calculate an F1 for each industry. **Macro F1** gives every industry the same weight. **Weighted F1** weights each by its support: the number of true records of that class in the evaluated subset.
+
+With classes containing 90 and 10 records, their F1 scores have weights 0.9 and 0.1 in weighted F1, but 0.5 each in macro F1. Weighted F1 can therefore hide weaknesses in rare industries. `zero_division=0` assigns zero to undefined ratios, such as precision for a class never predicted. It avoids an undefined result; it does not fix the predictive problem.
+
+### Confusion matrices and error comparisons
+
+Rows represent true industries; columns represent predicted industries. The diagonal contains correct predictions. The plots normalize each row: a cell of 0.2 means that 20% of the row's true industry was assigned to the column's industry. This also makes small classes visible.
+
+The most-confused industry pairs use absolute counts, which are affected by class size. The LR/k-NN comparison counts errors made by both, only LR and only k-NN. Complementary errors support trying a combination, but do not guarantee that it will help.
+
+The correlation between training size per industry and validation error describes an association rather than a cause. A negative correlation suggests fewer errors in larger classes; it does not prove that adding records alone would resolve semantic confusion.
+
+## 14. What financial plots show
+
+The tables show available counts and medians by industry; boxplots summarize medians and quartiles. `showfliers=False` hides extreme dots in the plot, but does not remove those observations from the data or reference profiles.
+
+The `symlog` scale displays negative, zero and positive values across different orders of magnitude. An ordinary logarithm would be undefined for negative values. This is a plotting choice rather than an additional transformation of classifier features.
+
+We do not assume that every ratio follows a normal or lognormal distribution. The p-value material suggests checking unusual values, but does not automatically justify removing losses or concluding “unusual finances mean an incorrect industry.” A company may be young, distressed, exceptionally profitable or subject to different accounting conventions. Financial data provides supporting evidence.
+
+## 15. Financial compatibility from empirical percentiles
+
+For each `(industry, ratio)` pair, `profiles` stores the fitting subset's finite values in sorted order. Profiles with fewer than 20 observations are skipped. This is a practical minimum to avoid very small references, rather than a statistical law.
+
+For a new company, we use the **predicted industry's** profile, never the true industry's. `searchsorted` locates two positions for its value `x`:
+
+- `left`: how many reference observations are strictly smaller than `x`;
+- `right`: how many are smaller than or equal to `x`.
+
+For a reference of `m` values:
+
+```text
+q = (0.5 × (left + right) + 0.5) / (m + 1)
+ratio compatibility = 2 × min(q, 1 − q)
+```
+
+Averaging left and right handles ties with a middle rank. The `+0.5` and `m+1` adjustment avoids percentiles exactly equal to zero or one.
+
+Example: reference `[1, 2, 2, 4]`, new value 2. Left=1 and right=3, giving `q=(2+0.5)/5=0.5` and compatibility=1. A value above every reference gives `q=4.5/5=0.9` and compatibility=0.2. More reference observations allow finer distinctions in the tails.
+
+The score is high in the center and low in both tails. A value enormously above the maximum has the same rank as a value just above it: its magnitude cannot dominate the score. We do not estimate a variance that one outlier could inflate greatly.
+
+We average the available ratios' scores and call the result **empirical compatibility**, rather than a correctness probability or an exact p-value. Its form resembles a two-sided tail score. Averaging three scores, especially correlated ones, is not a formal method of combining p-values.
+
+A properly defined p-value is the probability of observing data at least as extreme under a specified null hypothesis. It is not the probability that the hypothesis is true. A financially unusual value does not establish that the predicted industry is wrong.
+
+### Missing ratios
+
+`available` counts ratios that have a finite observation and a usable reference profile. Dividing by three gives coverage 0, 1/3, 2/3 or 1. When none is usable, compatibility is 0.5 and availability is 0.
+
+This does not mean “the financial data gives 50% probability.” It is a placeholder accompanied by explicit missingness information. It differs from observed compatibility 0.5 with availability 1. `np.divide(..., where=available > 0)` avoids division by zero; it does not reconstruct missing finances.
+
+## 16. Learning confidence as binary correctness
+
+On the calibration subset, we freeze the ensemble prediction and compare it with the target. This creates a new target:
+
+```text
+correct_cal = 1 if prediction == y_cal, otherwise 0
+```
+
+This is a second supervised problem with two outcomes: correct or incorrect prediction. A small logistic regression estimates the probability of outcome 1 from five signals:
+
+| Input | Why it may help |
+| --- | --- |
+| Largest ensemble probability | How strong the leading candidate is. |
+| Difference between the largest and second-largest probabilities | How clear its lead is. |
+| LR/k-NN agreement | Whether both models would choose the same industry. |
+| Financial compatibility | How central the financial values are in the predicted industry. |
+| Fraction of available ratios | How much financial evidence was observed. |
+
+For `[0.60, 0.39, 0.01]`, the margin is 0.21; for `[0.60, 0.20, 0.20]`, it is 0.40. The maximum probability is the same, but the leading candidate is more separated in the second case. The calibrator learns whether this signal is useful in the data.
+
+We do not require agreement or compatibility always to increase confidence: coefficients are learned from correctness. Two models may agree on the same error. Financial data might add no information.
+
+The text-only calibrator uses the first three inputs; the financial calibrator uses all five. They share the target and calibration subset. This comparison better isolates the financial contribution than comparing financial calibration only with raw probabilities.
+
+The logistic calibrator also minimizes regularized log-loss, rather than directly minimizing Brier or maximizing F1. We choose it as a simple probabilistic model of correctness. Validation measures whether this training actually improves Brier and the official score; improvement is not automatic.
+
+`predict_proba(... )[:, 1]` selects the probability of the “correct” class. It is not the probability of industry code 1: this second model's classes are correctness 0 and 1.
+
+Confidence 0.8 is an estimate to check over many similar cases: among those assigned about 0.8, we should observe roughly 80% correctness. It does not certify an individual prediction. The calibration subset needs both errors and correct predictions; otherwise the binary model has only one outcome to learn from.
+
+## 17. The skeleton's scoring formula
+
+The relevant source is `confidence_score` in `code_skeleton_industry_classification.ipynb`, cells 18–19. The teaching notebook `classification.ipynb` presents a different binary metric that weights TP, FP and FN; that is not this function.
+
+```text
+correct_i = 1 if the predicted class is correct, otherwise 0
+Brier = mean((confidence_i − correct_i)²)
+score = weighted_F1 × (1 − Brier)
+```
+
+Weighted F1 weights industries by support. **Confidence is not an F1 sample weight:** it affects the Brier term. Here we compare one confidence per record with binary correctness, rather than compare the full probability vector with every label as in a common multiclass Brier score.
+
+| Outcome | Confidence | Contribution to Brier |
+| --- | ---: | ---: |
+| Correct | 0.9 | `(0.9 − 1)² = 0.01` |
+| Incorrect | 0.9 | `(0.9 − 0)² = 0.81` |
+| Correct | 0.2 | `(0.2 − 1)² = 0.64` |
+| Incorrect | 0.2 | `(0.2 − 0)² = 0.04` |
+
+Reducing every confidence decreases the cost of errors but increases the cost of correct predictions. Neither absolute certainty nor constant caution is automatically a good strategy. For a group with true correctness frequency `p`, the expected loss of constant confidence `c` is `p(c−1)² + (1−p)c²`; its minimum occurs at `c=p`. This explains why we estimate correctness rather than inflate or shrink numbers arbitrarily.
+
+With confidence in `[0,1]`, Brier lies between zero and one; the score cannot exceed weighted F1. With 78% F1, no confidence transformation can produce an 85% official score. Before comparing a threshold, identify which metric it refers to.
+
+The attachments do not establish an official numerical bonus threshold. The 85% mentioned in the project's history is a local goal rather than a result or a grade guarantee. The 66% mentioned in the recovery text is not thereby an official skeleton threshold. Private-test results and the instructor's grading remain outside this evaluation.
+
+## 18. Reliability plots and human review
+
+We divide confidence into bins of width 0.1. For each, we report its count, mean confidence and observed accuracy. The plot compares these means with the ideal diagonal.
+
+A point below the diagonal indicates overconfidence: for example, mean confidence 0.85 but accuracy 0.75. A point above indicates underconfidence. Ten records give a noisier estimate than a thousand, which is why counts are shown. The plot does not establish perfect calibration and depends on the chosen bins.
+
+The policy flags confidence `< 0.8` for human review. This is the baseline's practical threshold, rather than one required by the instructor or optimized here on validation. Every company remains in the score: difficult cases are not removed to improve the metric.
+
+We examine how many companies would require review and how many errors the policy captures. Raising the threshold can find more errors but increases workload. A real application would need error costs, a review budget and validation of the policy.
+
+## 19. Inference without targets
+
+`predict_industry(companies, financials=None)` returns two vectors: industry names and confidence values. It prepares the data, converts embeddings, applies the already fitted PCA, obtains probabilities from the already fitted classifiers, combines votes, builds the five signals and applies the already fitted calibrator.
+
+It does not perform another `fit` or require `industry`. The notebook example explicitly removes that column. Output follows input-row order even when the pandas index is not numbered sequentially from zero.
+
+You can pass already joined finances or a separate table for the same company IDs being predicted. Missing values remain missing. Private labels cannot be used, and unprovided financial observations cannot be assumed known.
+
+The attachments do not specify a mandatory function name, a private-test schema or a submission CSV. This simple entry point can be adapted to the actual instructions. We do not invent official formats.
+
+Models remain in memory after execution. The deliverable is a complete notebook, as in the skeleton, rather than a published Python package. Adding classes, frameworks or serialization without a specific need would lengthen the code without helping explain the methods.
+
+## 20. Historical results and limits of the evidence
+
+This table comes from saved outputs of the previous version, using ID-grouped splitting with seed 42. **It is not a new execution on real datasets during this revision:** those files were unavailable. Tests using synthetic data check that the code works; they do not measure quality on real companies.
+
+| Historical method | Accuracy | Weighted F1 | Macro F1 | Brier | Skeleton score |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| LR | 0.781457 | 0.777788 | 0.717515 | 0.137087 | 0.671163 |
+| k-NN | 0.777042 | 0.771401 | 0.710471 | 0.141496 | 0.662251 |
+| Raw ensemble | about 0.7862 | 0.780881 | — | 0.137380 | 0.673604 |
+| Text-calibrated ensemble | same classification | 0.780881 | — | 0.135923 | 0.674742 |
+| Financial-calibrated ensemble | same classification | 0.780881 | — | 0.135585 | 0.675006 |
+
+LR was slightly stronger than k-NN among the two required classifiers. The ensemble gained about 0.31 percentage points of weighted F1 over LR. Finances gained about 0.026 percentage points of official score over text calibration: a very small change, rather than robust superiority established across datasets.
+
+The previous version reported about 78 seconds for the notebook and 81.5 with external checks in the cloud environment. These are historical measurements on that machine, rather than a benchmark repeated now or a guarantee for every laptop. The 45-minute budget comes from the project context and needs checking on the intended hardware.
+
+### Repeated descriptions
+
+Splitting by ID does not prevent different companies from having identical embeddings. In the historical run, 455 validation records, about 14.35%, had an embedding seen in fitting. Ensemble accuracy was 99.34% on those records and 75.15% on the 2,716 unseen ones.
+
+The overall result therefore concerns new companies from a distribution containing repeated descriptions. It does not establish the same quality on entirely new descriptions. The notebook reports the distinction rather than hiding the limitation or removing cases from scoring.
+
+Grouping by description as well would be a stricter, different experiment whose figures would not be directly comparable. The historical data also contained identical embeddings with conflicting labels: a classifier using only those features cannot distinguish such rows based on information it does not have.
+
+### Hyperparameters and experiments
+
+The previous documentation mentioned parameter comparisons without retaining a complete experimental log here. Therefore, `C=10`, 128 components and 15 neighbors are described as the baseline configuration, rather than experiments newly performed now or mathematically proven optima.
+
+The priority is compact, correct and explainable code. We avoid adding neural networks, many-level stacking or large searches without evidence of usefulness. Fewer lines should not mean compressing everything into unreadable expressions: a few small functions clarify reused steps.
+
+## 21. Python concepts that explain the method
+
+- `fit`, `transform`, `predict`, `predict_proba`: learn parameters, apply a learned transformation, select a class, produce probabilities. These are different operations.
+- `iloc`: selects by position; splitters return positions rather than necessarily pandas index labels.
+- `groupby(...).median()`: groups and summarizes. Grouping by ID prepares one financial row per company; grouping by industry describes fitting distributions.
+- `reindex(columns=...)`: adds the required columns with NaN where absent; it does not invent observations.
+- `merge`: links information by a key rather than concatenating arbitrary rows.
+- Boolean masks: select records satisfying conditions, such as a predicted industry and a finite ratio.
+- `np.isfinite`: excludes NaN and infinities, rather than excluding a number merely because it is large.
+- `np.sort(..., axis=1)`: sorts votes within each company to find the highest and second-highest values; it does not reorder companies.
+- `np.column_stack`: places the five signals side by side to form the calibrator's feature matrix.
+- The `profiles` dictionary: maps an industry/ratio pair to a sorted array; it is not another classifier.
+- `astype(int)`: converts correctness booleans to targets 1 and 0.
+- List comprehension: applies the same operation to several subsets; it does not pool their data during fitting.
+- `assert`: checks a required condition; it does not improve the score.
+- `perf_counter`: measures elapsed time; it is not a feature.
+
+## 22. Likely oral questions
+
+### “What are the input and output?”
+
+The description embedding is the essential input; available finances support confidence. I return an industry and the estimated probability that this particular chosen label is correct.
+
+### “Why not use the text directly?”
+
+The task provides embeddings. I use the pretrained semantic representation and fit the required classical models without training a language model again.
+
+### “Is PCA a classifier?”
+
+No: it is an unsupervised transformation. LR and k-NN perform classification. PCA supports visualization and reduces distance-computation cost.
+
+### “Why two components in the plot and 128 in the model?”
+
+Two can be plotted, but they discard substantial information. k-NN uses all 128 and LR uses the originals. Retained variance is different from accuracy.
+
+### “If the colors overlap, why attempt classification?”
+
+The two-dimensional projection loses information. Classes overlapping in that plot may be distinguished by coordinates it does not show. Held-out evaluation tests this.
+
+### “Why fit PCA only on fitting if it does not use labels?”
+
+The validation-feature distribution should also remain outside what is learned before those companies are evaluated.
+
+### “What is the difference between LR and k-NN?”
+
+LR learns global weights and applies softmax; k-NN compares local examples and votes. Their probabilities come from different mechanisms and they may have complementary errors.
+
+### “Why can k-NN be slow?”
+
+It searches for neighbors during prediction. PCA reduces the number of coordinates, and caching avoids repeating searches. Fast fitting does not imply cheap prediction.
+
+### “Why C=10 and k=15?”
+
+They are baseline parameters. C inversely controls regularization and k controls how local the vote is. They are not claimed as global optima; establishing better choices would require recorded tuning comparisons.
+
+### “Does LR maximize F1?”
+
+No: it optimizes regularized log-loss. F1 is the metric used to compare decisions and select the ensemble weight among the candidates.
+
+### “Are accuracy and weighted F1 interchangeable?”
+
+No. Accuracy counts correct rows; weighted F1 aggregates per-class precision and recall with support weights. Macro F1 gives an additional perspective with equal industry weights.
+
+### “Why not use balanced class weights?”
+
+They could help small classes but do not guarantee a better official metric. I avoid adding an untested change and show class imbalance through per-class metrics.
+
+### “Does an ensemble always improve performance?”
+
+No. It is plausible when models have complementary information, but needs testing. The historical advantage over LR was small.
+
+### “Why not select the weight using calibration?”
+
+The calibrator should learn correctness for a system that is already fixed. Using the same targets to select and calibrate the combination would merge those two roles.
+
+### “Why not retrain on 100% afterward?”
+
+Final training can be designed, but it must preserve a valid way to learn confidence. Simply adding calibration companies to the classifiers leaves a calibrator fitted for a different system. This version keeps the system frozen and verifiable without more complex cross-fitting.
+
+### “How do you choose the financial profile?”
+
+From the predicted industry, never the true target. Otherwise I would use an answer unavailable when predicting a new company.
+
+### “Why ranks?”
+
+I avoid assuming normality and limit the influence of extremes. I estimate relative position in the industry's reference sample, with the limitations of finite data.
+
+### “Is it a p-value?”
+
+I call it empirical compatibility. I do not claim formal testing guarantees; it is not the probability that the industry is correct. Averaging ratios' scores is not a formal p-value combination.
+
+### “Do unusual finances mean the industry is wrong?”
+
+No: they may be real company characteristics. Here they contribute to confidence through a model trained on observed correctness, rather than directly changing the label.
+
+### “Why not fill missing values with zero?”
+
+Zero would be an observed ratio, which differs from absence. I use available ratios and a coverage signal. Compatibility 0.5 with zero availability is a placeholder rather than a financial probability.
+
+### “How do you learn confidence?”
+
+On companies not used to fit the classifiers, I compare predictions and targets. I create a correct/incorrect target and fit logistic regression using five signals that can also be calculated without targets during inference.
+
+### “Why is the maximum probability not enough?”
+
+It may be poorly calibrated. Margin, agreement and finances may better describe error frequency. I compare raw, text-calibrated and financial-calibrated Brier scores on the same cases.
+
+### “Does confidence enter F1?”
+
+Not in this skeleton. The score is weighted F1 multiplied by one minus Brier. The teaching materials contain another formula that should not be confused with the project's scoring function.
+
+### “Why not always report low confidence?”
+
+Brier also penalizes correct predictions assigned low confidence. Expected loss is minimized when confidence matches the actual correctness frequency.
+
+### “Does confidence 0.9 certify an individual case?”
+
+No: it is an estimate. Calibration is checked on groups with similar confidence, while also considering how many observations support each group.
+
+### “Did you obtain the bonus?”
+
+That cannot be claimed. Historical outputs show about 78.09% F1 and 67.50% official score, which are different metrics. We do not have the private test or an established official threshold. The revised version still needs a real-data execution.
+
+### “What is the main weakness?”
+
+One split, historically inspected validation, no private test and repeated descriptions across different IDs. Performance on unseen embeddings alone was substantially lower; that distinction is reported.
+
+### “What would be a sensible next experiment?”
+
+First, run this version on the real datasets and compare it with the baseline. Then test one simple change using tuning and a recorded log. To investigate generalization, add a description-grouped evaluation while clearly stating that it measures a different scenario.
+
+## 23. How to prepare
+
+1. Run from a fresh kernel once both datasets are available. Read every table rather than only the final score.
+2. Draw the four subsets and identify which objects learn from each: PCA, classifiers, profiles, ensemble weight and calibrators.
+3. Combine two three-class probability vectors by hand, each summing to one; find the maximum, margin and predicted class.
+4. Calculate precision, recall, F1 and Brier with small numbers: they are different concepts.
+5. Calculate percentiles using a short reference array, including a tie and a missing observation.
+6. Interpret an overconfident bin and a bin with few records in the reliability plot.
+7. Try answering the questions without reading. For every method, explain what it receives, what it learns and what it returns.
+8. Follow the instructor's actual submission instructions for the clean notebook and required files. The annotated copy and this guide are study materials unless requested otherwise.
+
+A useful explanation distinguishes **why a choice is reasonable**, **what was measured**, **what remains unproven** and **how it could be checked**. It does not require treating every choice as the only possible one.
