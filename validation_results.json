@@ -217,12 +217,13 @@
     "fresh_kernels": true,
     "all_notebook_cells_executed": true,
     "no_error_outputs": true,
-    "original_skeleton_markdown_scorer_and_example_preserved": true,
     "clean_and_annotated_ast_identical": true,
     "main_study_baseline_predictions_identical": true,
     "main_study_baseline_probabilities_features_confidence_match_tolerance": 1e-10,
     "inference_without_targets_full_validation_match": true,
-    "split_probability_confidence_scorer_order_missing_finances_checks": "passed"
+    "split_probability_confidence_scorer_order_missing_finances_checks": "passed",
+    "original_skeleton_scorer_and_example_preserved": true,
+    "original_skeleton_markdown_preserved_at_recorded_execution": true
   },
   "submission_code_sha256": "7ba953b03ab06404682c440b6295c137beac5b6eae4b60cbb9b92e1566fa829e",
   "limitations": [
@@ -230,5 +231,12 @@
     "Validation has been inspected during earlier development.",
     "Company-ID separation does not guarantee entirely new descriptions.",
     "Resource measurements are from the Linux cloud, not the student laptop."
-  ]
+  ],
+  "editorial_revision": {
+    "scope": "Markdown report and study explanations; ML code and real-data outputs unchanged",
+    "original_skeleton_markdown_currently_verbatim": false,
+    "course_data_rerun": false,
+    "metric_display_name": "Assignment validation score",
+    "legacy_metric_keys": "official_bonus_score and Official score retain the original numerical schema; they do not denote a bonus award"
+  }
 }

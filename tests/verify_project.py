@@ -139,9 +139,14 @@ def main():
     study_code = [c.source for c in study.cells if c.cell_type == 'code']
     assert [ast.dump(ast.parse(s)) for s in clean_code] == [ast.dump(ast.parse(s)) for s in study_code]
     skeleton = nbformat.read(ROOT / 'archive/code_skeleton_industry_classification.ipynb', as_version=4)
-    expected_tasks = [c.source for c in skeleton.cells if c.cell_type == 'markdown']
-    actual_tasks = iter(c.source for c in nb.cells if c.cell_type == 'markdown')
-    assert all(any(text == expected for text in actual_tasks) for expected in expected_tasks)
+    report = '\n'.join(c.source for c in nb.cells if c.cell_type == 'markdown')
+    assert '### Tasks:' not in report and '## Deliverables:' not in report
+    assert not any(c.source.strip() == '#' for c in nb.cells if c.cell_type == 'markdown')
+    for topic in ['LabelEncoder', 'class frequencies', 'PCA', 'LogisticRegression',
+                  'k-NN', 'macro F1', 'confusion matrices', 'shared errors',
+                  'Soft voting', 'Financial', 'calibration', 'Brier', 'review',
+                  'predict_industry', 'unseen embeddings', 'private-test']:
+        assert topic in report, 'Missing methodological coverage: ' + topic
     assert skeleton.cells[19].source in clean_code
     assert skeleton.cells[20].source in clean_code
     for document in [nb, study]:

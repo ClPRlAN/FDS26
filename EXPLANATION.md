@@ -319,7 +319,7 @@ We do not require agreement or compatibility always to increase confidence: coef
 
 The text-only calibrator uses the first three inputs; the financial calibrator uses all five. They share the target and calibration subset. This comparison better isolates the financial contribution than comparing financial calibration only with raw probabilities.
 
-The logistic calibrator also minimizes regularized log-loss, rather than directly minimizing Brier or maximizing F1. We choose it as a simple probabilistic model of correctness. Validation measures whether this training actually improves Brier and the official score; improvement is not automatic.
+The logistic calibrator also minimizes regularized log-loss, rather than directly minimizing Brier or maximizing F1. We choose it as a simple probabilistic model of correctness. Validation measures whether this training actually improves Brier and the assignment score; improvement is not automatic.
 
 `predict_proba(... )[:, 1]` selects the probability of the “correct” class. It is not the probability of industry code 1: this second model's classes are correctness 0 and 1.
 
@@ -346,7 +346,7 @@ Weighted F1 weights industries by support. **Confidence is not an F1 sample weig
 
 Reducing every confidence decreases the cost of errors but increases the cost of correct predictions. Neither absolute certainty nor constant caution is automatically a good strategy. For a group with true correctness frequency `p`, the expected loss of constant confidence `c` is `p(c−1)² + (1−p)c²`; its minimum occurs at `c=p`. This explains why we estimate correctness rather than inflate or shrink numbers arbitrarily.
 
-With confidence in `[0,1]`, Brier lies between zero and one; the score cannot exceed weighted F1. With 78% F1, no confidence transformation can produce an 85% official score. Before comparing a threshold, identify which metric it refers to.
+With confidence in `[0,1]`, Brier lies between zero and one; the score cannot exceed weighted F1. With 78% F1, no confidence transformation can produce an 85% assignment score. Before comparing a threshold, identify which metric it refers to.
 
 The assignment states that the final bonus threshold **will be above 66% and will be defined after all submissions have been evaluated on the private test set**. The final value is not known. A local validation score above 66% is therefore not proof of earning the bonus. The 85% mentioned in the project's history is a local target, not the official threshold. Private-test performance and the instructor's grading remain outside this evaluation.
 
@@ -380,11 +380,11 @@ Models remain in memory after execution. The deliverable is a complete notebook,
 
 ## 20. Current results and limits of the evidence
 
-The following results were freshly measured on the supplied original datasets, using ID-grouped splitting with seed 42. All 19 code cells completed in a fresh kernel, all eight plots were produced, and additional checks passed for split separation, probability and confidence bounds, the official scorer and prediction over the whole validation set. These numbers reproduce the previously archived metrics; they are now supported by a new execution rather than copied outputs.
+The following results were freshly measured on the supplied original datasets, using ID-grouped splitting with seed 42. All 19 code cells completed in a fresh kernel, all eight plots were produced, and additional checks passed for split separation, probability and confidence bounds, the assignment scorer and prediction over the whole validation set. These numbers reproduce the previously archived metrics; they are now supported by a new execution rather than copied outputs.
 
 Synthetic regression tests serve a different purpose: they check code behavior and edge cases, rather than measure course-data performance. The table below uses the real course data.
 
-| Current method | Accuracy | Weighted F1 | Macro F1 | Brier | Skeleton score |
+| Current method | Accuracy | Weighted F1 | Macro F1 | Brier | Assignment score |
 | --- | ---: | ---: | ---: | ---: | ---: |
 | LR | 0.781457 | 0.777788 | 0.717515 | 0.137087 | 0.671163 |
 | k-NN | 0.777042 | 0.771401 | 0.710471 | 0.141496 | 0.662251 |
@@ -394,7 +394,7 @@ Synthetic regression tests serve a different purpose: they check code behavior a
 
 The final candidate is the financial-calibrated ensemble. Its **main local graded score is 67.50%**, with **78.09% weighted F1**, Brier **0.135585** and **3,171 validation records**. The notebook prints these together under `MAIN GRADED SCORE (LOCAL VALIDATION)`. The instructor's retained logistic-regression example prints separate example scores; those are not the final candidate's result.
 
-LR is slightly stronger than k-NN among the two required classifiers. The ensemble gains about 0.31 percentage points of weighted F1 over LR. Finances gain about 0.026 percentage points of official score over text calibration: a very small change, rather than robust superiority established across datasets. A local score above 66% is not proof of the bonus, because the final threshold will exceed 66% and is decided from private-test submissions afterward.
+LR is slightly stronger than k-NN among the two required classifiers. The ensemble gains about 0.31 percentage points of weighted F1 over LR. Finances gain about 0.026 percentage points of assignment score over text calibration: a very small change, rather than robust superiority established across datasets. A local score above 66% is not proof of the bonus, because the final threshold will exceed 66% and is decided from private-test submissions afterward.
 
 The fresh cloud run took **87.28 seconds including verification and the additional instructor example**. The upper bound obtained by summing runner and kernel resident memory peaked at **1,594,036,224 bytes, about 1.48 GiB**; this can count shared pages more than once and is not a precise exclusive-memory measurement. These figures cover the Linux cloud runner plus Jupyter kernel, rather than training alone or the student's laptop. The assignment explicitly requires training within 45 minutes on mid-tier hardware with 16 GB RAM. That hardware-specific check remains to be performed on the intended machine.
 
@@ -411,6 +411,30 @@ Grouping by description as well would be a stricter, different experiment whose 
 The previous documentation mentioned parameter comparisons without retaining a complete experimental log here. Therefore, `C=10`, 128 components and 15 neighbors are described as the baseline configuration, rather than experiments newly performed now or mathematically proven optima.
 
 The priority is compact, correct and explainable code. We avoid adding neural networks, many-level stacking or large searches without evidence of usefulness. Fewer lines should not mean compressing everything into unreadable expressions: a few small functions clarify reused steps.
+
+## Development rationale and recorded comparisons
+
+This account reconstructs the logic of the final pipeline from saved evidence. It is not a complete chronological experiment diary. The editorial revision preserves the earlier real-data executions; it does not report a new training run.
+
+**A. Inspect the data and separate roles.** We first need meaningful units of evaluation. Company-ID grouping keeps repeated company records together, and four subsets separate fitting, voting-weight selection, calibration and evaluation. This protects against several forms of leakage, but the observed repeated embeddings show why ID separation does not ensure new descriptions. The split is not stratified and validation was inspected in earlier development.
+
+**B. Establish simple references.** The supplied C=1 logistic example illustrates the exact assignment scorer: approximately 0.6577 with model confidence versus 0.5972 with confidence always one. It demonstrates that certainty is penalized on mistakes, rather than establishing the best classifier. A majority-class predictor would be a useful conceptual reference for imbalance, but no measured majority-baseline experiment is claimed here.
+
+**C. Explore PCA and compare required classifiers.** PCA compresses 768 coordinates to 128 for k-NN; two plotted components retain 25.287% variance and all 128 retain 87.624%. Visualization shows both concentrations and overlap. LR weighted F1 is 0.777788 versus k-NN's 0.771401, supporting LR as the stronger standalone model on this split. C=10, k=15 and PCA128 were retained settings, not newly optimized choices. Increasing C weakens regularization; increasing k smooths local votes; reducing dimension lowers distance cost but can discard useful signal. None is universally preferable.
+
+**D. Inspect errors before combining.** Both models miss 520 cases, while 173 errors are unique to LR and 187 to k-NN. This suggests complementary information, although many shared errors remain. Common confusion directions include Capital Goods predicted as Materials (28 LR, 33 k-NN), and Technology Hardware & Equipment predicted as Capital Goods (21, 24). Negative class-size/error correlations do not prove that frequency causes those mistakes.
+
+**E. Select the voting weight on tuning.** LR weights 0.25, 0.50 and 0.75 yield tuning weighted F1 of 0.791847, 0.783686 and 0.782247. We therefore retain 0.25 LR and 0.75 k-NN. The weight favors k-NN despite LR's stronger standalone validation result: these are different comparisons on different subsets. Matching probability-column class order is essential before addition. The resulting validation weighted F1 is 0.780881, only about 0.31 percentage points above LR.
+
+**F. Evaluate raw confidence.** Taking the maximum ensemble vote is a simple reference. It produces Brier 0.137380 and assignment score 0.673604. A high vote is evidence of model preference, not automatically a calibrated correctness probability.
+
+**G. Calibrate text-based correctness.** A binary logistic regression learns correct=1 versus incorrect=0 using maximum vote, margin and agreement on calibration companies. This separates predicting an industry from estimating whether that prediction is right. Text calibration gives Brier 0.135923 and score 0.674742. Its regularized log-loss objective differs from Brier, so improvement is an observed result rather than a mathematical guarantee.
+
+**H. Add financial compatibility and coverage.** Fitting-only empirical ranks avoid a blanket Gaussian assumption for ratios with negative values and long tails. Missingness matters: raw EBITDA margin is absent in 65.2% of financial rows, with another 824 infinite values. Middle ranks handle ties; coverage distinguishes an unavailable profile from typical finances. The predefined financial candidate gives Brier 0.135585 and score 0.675006, just 0.026 percentage points above text calibration. All three confidence variants retain the same labels. The validation comparison does not select the final candidate after seeing its score, nor establish a robust financial advantage. Direct financial-feature classifiers and Gaussian models are conceptual alternatives, not recorded failed experiments.
+
+**I. Examine reliability and review workload.** The highest populated bin has mean confidence 93.74% and accuracy 94.87% across 1,385 cases; the 0.8–0.9 bin is overconfident at 85.79% versus 82.01%. Flagging confidence below 0.8 sends 36.9% of cases to review and captures 73.2% of errors. This illustrates a workload/error tradeoff, not guaranteed correction by a human or an optimized deployment policy. Every flagged record remains in evaluation.
+
+**J. Verify reproducibility and limits.** Earlier independent real-data kernels executed all 19 cells in both final notebooks, with eight plots each. Baseline, submission and study predictions matched exactly; probabilities, PCA variance, features and confidence matched within 1e-10. The 87.3-second main cloud execution and 1.48 GiB summed-RSS upper bound are not laptop measurements. Synthetic tests exercise behavior separately from course-data scores. Keeping two required classifiers, one small voting choice and binary correctness calibration makes the system explainable without neural models or a large search. Such alternatives have not been measured here. Private-test quality, stability across new splits and compliance on the intended laptop remain unproven.
 
 ## 21. Python concepts that explain the method
 
@@ -533,7 +557,7 @@ No: it is an estimate. Calibration is checked on groups with similar confidence,
 
 ### “Did you obtain the bonus?”
 
-That cannot be claimed. The fresh real-data validation gives about 78.09% F1 and 67.50% official score, which are different metrics. The final bonus threshold will be above 66% and set after all submissions; neither it nor our private-test score is known. We have verified the local result, not the bonus award.
+That cannot be claimed. The fresh real-data validation gives about 78.09% F1 and 67.50% assignment score, which are different metrics. The final bonus threshold will be above 66% and set after all submissions; neither it nor our private-test score is known. We have verified the local result, not the bonus award.
 
 ### “What is the main weakness?”
 

@@ -32,9 +32,9 @@ The assignment text now supplied explicitly states that the final bonus threshol
 9. Predetermined final candidate: financial-calibrated ensemble; comparisons with raw/text-only confidence do not select the winner on validation. Review threshold .8 is an illustrative policy, neither optimized here nor prescribed by the instructor.
 10. Final validation and `predict_industry(companies, financials=None)`, returning industry names/confidence without requiring targets.
 
-## Changes in this revision
+## Earlier implementation revision
 
-- The earlier compact revision used 206 physical Python lines. Following the user's correction, all 10 original skeleton Markdown cells have been restored verbatim and in order, together with its original imports, preview, exact scoring function and labelled example. The restored implementation has 256 physical Python lines across 19 code cells; the extra lines preserve instructor material. Its original is preserved in `archive/code_skeleton_industry_classification.ipynb`. Placeholder tasks are completed by the existing implementation rather than left empty.
+- The earlier compact revision used 206 physical Python lines. Following the user's correction, all 10 original skeleton Markdown cells were restored verbatim and in order in that earlier revision, together with its original imports, preview, exact scoring function and labelled example. The restored implementation has 256 physical Python lines across 19 code cells; the extra lines preserve instructor material. Its original is preserved in `archive/code_skeleton_industry_classification.ipynb`. Placeholder tasks are completed by the existing implementation rather than left empty.
 - Models, hyperparameters, features, candidate weights and splits preserved. No claimed F1 improvement.
 - `prepare_companies` reused in training and inference: missing ratios become NaN; infinities are cleaned; separate financial tables are supported and override existing ratios. Caller inputs remain unchanged and rows are not multiplied. Embeddings can be strings or vectors.
 - Added probability-column alignment checks. Study explanations are separate from the submission; verification code is in `tests/`.
@@ -55,7 +55,7 @@ These are functional and regression checks. Their synthetic scores do not measur
 
 ### Fresh course-data execution: 31 October 2026
 
-The clean notebook completed all **19 code cells**, in order, from a fresh kernel, with **8 plots**, 34 output blocks and no cell failures. The implementation remains 256 physical Python lines, including the instructor's preserved imports, preview, scorer and demonstration. All 10 original skeleton Markdown cells remain verbatim and in their original order; the original imports, preview, scoring function and example are also source-preserved.
+The clean notebook completed all **19 code cells**, in order, from a fresh kernel, with **8 plots**, 34 output blocks and no cell failures. The implementation remains 256 physical Python lines, including the instructor's preserved imports, preview, scorer and demonstration. At the time of that execution, all 10 original skeleton Markdown cells were verbatim and in their original order; the original imports, preview, scoring function and example are also source-preserved.
 
 The main report is **MAIN GRADED SCORE (LOCAL VALIDATION): 67.50%**. Its predetermined final candidate is the financial-calibrated ensemble. On 3,171 validation records, its weighted F1 is **78.09%**, Brier is **0.135584565225789**, and the exact official score is **0.6750059970173232**. The instructor's separate demonstration scores and the diagnostic comparison table are not substituted for this final candidate's score.
 
@@ -101,3 +101,11 @@ The annotated study notebook also completed an independent fresh-kernel course-d
 2. Measure runtime/memory on the actual laptop if the resource constraint applies; cloud execution alone does not certify that hardware.
 3. Adapt only the interface/filename if later private instructor instructions require it; preserve data cleaning and target independence during inference.
 4. Study the annotated notebook and guide, then practise explaining the choices and limitations independently. Upload to the official course repository manually.
+
+## Final editorial revision
+
+The latest request supersedes verbatim preservation of instructor Markdown. The submission now reports what we did, observed and concluded; assignment coverage remains, and the archive, executable code, scorer, example, execution counts and real-data outputs are unchanged. The annotated copy shares the revised report and adds an evidence-based development account, also added to EXPLANATION.md. C=10, k=15 and PCA128 remain retained settings without invented optimization logs. Assignment-score terminology distinguishes the metric from any bonus award.
+
+Tests now check methodological coverage and absence of task directions instead of verbatim skeleton Markdown. Numerical and inference checks remain. validation_results.json preserves the earlier numerical provenance and records the Markdown revision separately; no new course-data execution is claimed.
+
+Current editorial checks passed: exact equality of all 19 complete code-cell objects (including outputs, counts and metadata) in each final notebook against commit 254acd6; unchanged archive files; main/study AST equality and original scorer/example preservation; pip dependency consistency; synthetic baseline/final execution and numerical equivalence within 1e-10. Synthetic runs produced 15 and 20 cells respectively including the added verification cell. A token-authenticated local Jupyter contents request also passed. The datasets were absent in this new instance, so no real-data retraining was needed or performed.

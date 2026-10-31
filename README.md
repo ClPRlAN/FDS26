@@ -1,12 +1,12 @@
 # Industry classification — final project
 
-**Verified official bonus score on local validation: 67.50%.** The final financial-calibrated ensemble obtains **78.09% classification weighted F1** and **0.135585 Brier** on **3,171 validation records**. The notebooks now contain genuine outputs from the supplied course datasets.
+**Verified assignment validation score: 67.50%.** The final financial-calibrated ensemble obtains **78.09% classification weighted F1** and **0.135585 Brier** on **3,171 validation records**. The notebooks now contain genuine outputs from the supplied course datasets.
 
 ## Which metric is graded?
 
 The optional bonus uses the instructor's exact function:
 
-**official score = weighted F1 × (1 − Brier)**
+**assignment score = weighted F1 × (1 − Brier)**
 
 For this run: `0.780881 × (1 − 0.135585) = 0.675006`, or **67.50%**. This is printed under **MAIN GRADED SCORE (LOCAL VALIDATION)**. Weighted F1 measures predicted industries; Brier measures how well confidence matches correctness. Confidence is not an F1 sample weight.
 
@@ -14,7 +14,7 @@ The other numbers answer different questions:
 
 | Metric/output | Purpose |
 |---|---|
-| **67.50% official score** | Local estimate of the bonus metric for the final model. |
+| **67.50% assignment score** | Local estimate of the bonus metric for the final model. |
 | **78.09% weighted F1** | Classification component of the final ensemble's score. |
 | Macro F1 and accuracy | Additional diagnostics, including minority-class performance. |
 | LR/k-NN comparison | Mandatory comparison of the two required classifiers. |
@@ -26,7 +26,7 @@ The final bonus cutoff **will exceed 66% and will be set after all submissions a
 
 | File | Purpose |
 |---|---|
-| `industry_classification.ipynb` | **Clean submission notebook**, executed with real outputs and concise findings. Original skeleton task sections, exact scorer and example retained. |
+| `industry_classification.ipynb` | **Clean submission notebook**, executed with real outputs and concise findings. Completed report covering the original assignment; exact scorer and example retained. |
 | `industry_classification_commented.ipynb` | Same executable code, independently executed, with English comments and study notes. |
 | `EXPLANATION.md` | Comprehensive English guide to methods, choices, formulas, Python details and oral questions. |
 | `validation_results.json` | Machine-readable results, data checksums, software versions and execution evidence. |
@@ -47,7 +47,7 @@ python -m pip install -r requirements.txt
 python -m jupyter lab
 ```
 
-The cloud checkout already has a prepared `.venv`. Choose its Python kernel, open the notebook and select **Restart Kernel and Run All Cells**. Run with the project directory as the working directory. Use the original trusted course files:
+Prepare `.venv` with the commands above when starting from a fresh checkout. Choose its Python kernel, open the notebook and select **Restart Kernel and Run All Cells**. Run with the project directory as the working directory. Use the original trusted course files:
 
 ```text
 data/df_train.pkl
@@ -60,7 +60,7 @@ The supplied training subset contains 31,706 company records, 31,705 IDs, 25 ind
 
 All rows below use the same 3,171 local validation companies. The financial-calibrated candidate was specified before evaluating this comparison. The three ensemble variants have identical labels; only confidence differs.
 
-| Method | Accuracy | Weighted F1 | Macro F1 | Brier | Official score |
+| Method | Accuracy | Weighted F1 | Macro F1 | Brier | Assignment score |
 |---|---:|---:|---:|---:|---:|
 | Logistic regression | 78.15% | 77.78% | 71.75% | 0.137087 | 67.12% |
 | k-NN | 77.70% | 77.14% | 71.05% | 0.141496 | 66.23% |
@@ -68,7 +68,7 @@ All rows below use the same 3,171 local validation companies. The financial-cali
 | Text-calibrated ensemble | 78.62% | 78.09% | 72.31% | 0.135923 | 67.47% |
 | **Financial-calibrated ensemble** | **78.62%** | **78.09%** | **72.31%** | **0.135585** | **67.50%** |
 
-LR is the stronger required classifier. Voting adds about 0.31 percentage points of weighted F1; finances add only 0.026 percentage points of official score over text calibration. These are modest gains on one split, not proof of robust superiority on every dataset. The formula in the teaching attachment `classification.ipynb` differs from the assignment skeleton and is not used.
+LR is the stronger required classifier. Voting adds about 0.31 percentage points of weighted F1; finances add only 0.026 percentage points of assignment score over text calibration. These are modest gains on one split, not proof of robust superiority on every dataset. The formula in the teaching attachment `classification.ipynb` differs from the assignment skeleton and is not used.
 
 ## Execution and verification
 
@@ -76,7 +76,7 @@ The submission and study notebooks each completed **all 19 code cells**, with **
 
 The submission run including verification took **87.3 seconds in the Linux cloud**. Sampled summed runner-plus-kernel RSS peaked at **1,594,036,224 bytes (1.48 GiB)**. This is an upper bound that may count shared pages twice, not a precise exclusive-memory measurement. Runtime includes the retained instructor example and verification. The assignment requires training within **45 minutes on mid-tier hardware with 16 GB RAM**; the cloud result is not a benchmark on the student's laptop.
 
-Checks cover original skeleton preservation, class-column alignment, disjoint company IDs, finite normalized probabilities, full-validation inference without targets, bounded confidence, input order/immutability, missing/infinite ratios, median aggregation, empirical ties and the 19/20-observation profile cutoff. To repeat the synthetic regression checks:
+Checks cover assignment coverage and original scorer/example preservation, class-column alignment, disjoint company IDs, finite normalized probabilities, full-validation inference without targets, bounded confidence, input order/immutability, missing/infinite ratios, median aggregation, empirical ties and the 19/20-observation profile cutoff. To repeat the synthetic regression checks:
 
 ```bash
 .venv/bin/python -m pip check
@@ -103,3 +103,5 @@ Company IDs do not overlap across subsets, but 455 validation records share exac
 The uncertainty method uses empirical financial compatibility and binary logistic calibration. Compatibility is not a correctness probability or a formal combined p-value. Confidence below 0.8 flags 36.9% of validation records and captures 73.2% of errors; flagged cases remain in every score.
 
 The project was prepared with AI assistance. Use the annotated notebook and guide to understand the methods, explain the choices and discuss their limits independently. No private score, bonus or maximum grade is guaranteed.
+
+The editorial revision converts instructor directions into a completed report and adds the evidence-based development rationale to the study materials. Code and real-data outputs are unchanged; no new course-data training run was performed.
