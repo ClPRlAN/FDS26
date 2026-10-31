@@ -138,11 +138,22 @@ def main():
     clean_code = [c.source for c in nb.cells if c.cell_type == 'code']
     study_code = [c.source for c in study.cells if c.cell_type == 'code']
     assert [ast.dump(ast.parse(s)) for s in clean_code] == [ast.dump(ast.parse(s)) for s in study_code]
-    assert all(not c.outputs and c.execution_count is None for c in study.cells if c.cell_type == 'code')
+    skeleton = nbformat.read(ROOT / 'archive/code_skeleton_industry_classification.ipynb', as_version=4)
+    expected_tasks = [c.source for c in skeleton.cells if c.cell_type == 'markdown']
+    actual_tasks = iter(c.source for c in nb.cells if c.cell_type == 'markdown')
+    assert all(any(text == expected for text in actual_tasks) for expected in expected_tasks)
+    assert skeleton.cells[19].source in clean_code
+    assert skeleton.cells[20].source in clean_code
+    for document in [nb, study]:
+        code_cells = [c for c in document.cells if c.cell_type == 'code']
+        if any(c.execution_count is not None for c in code_cells):
+            assert all(c.execution_count is not None for c in code_cells)
+            assert not any(o.output_type == 'error' for c in code_cells for o in c.outputs)
     for cell in nb.cells:
         if cell.cell_type == 'code':
             ast.parse(cell.source)
-            assert not any(t.type == tokenize.COMMENT for t in tokenize.generate_tokens(io.StringIO(cell.source).readline))
+            if cell.source != skeleton.cells[20].source:
+                assert not any(t.type == tokenize.COMMENT for t in tokenize.generate_tokens(io.StringIO(cell.source).readline))
     with tempfile.TemporaryDirectory(prefix='fds26-synthetic-') as work:
         work = Path(work)
         (work / 'data').mkdir()

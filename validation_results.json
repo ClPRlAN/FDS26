@@ -1,0 +1,234 @@
+{
+  "verified_at": "2026-10-31T10:16:49.098121+01:00",
+  "evaluation_scope": "Local validation on the original uploaded course training datasets; not the private test",
+  "final_model": "Financial-calibrated ensemble",
+  "main_graded_metric": "weighted F1 * (1 - mean((confidence - correctness)**2))",
+  "official_bonus_score": 0.6750059970173232,
+  "classification_weighted_f1": 0.7808814718742704,
+  "brier": 0.135584565225789,
+  "final_accuracy": 0.7861873226111636,
+  "final_macro_f1": 0.7230577924650434,
+  "bonus_threshold": "Above 66%; final value determined after all submissions; unknown",
+  "datasets": {
+    "df_train.pkl": {
+      "sha256": "401f228e88f369718f3c37201eb346e683c83698769965570653bcfd921f4471",
+      "bytes": 302951517
+    },
+    "df_financials_train.pkl": {
+      "sha256": "049cd7ef0540737d69a09ed8dedfb103bb7c6353d95782431ba69f3f90bc0fc0",
+      "bytes": 1360898
+    }
+  },
+  "data": {
+    "records": 31706,
+    "unique_ids": 31705,
+    "industries": 25,
+    "embedding_dimensions": 768,
+    "duplicate_embedding_records": 4578,
+    "conflicting_embedding_groups": 17,
+    "financial_records": 29561,
+    "financial_duplicate_ids": 162,
+    "financial_raw_missing": {
+      "net_profit_margin": 1111,
+      "ebitda_margin": 19279,
+      "asset_turnover": 1363
+    },
+    "financial_raw_infinite": {
+      "net_profit_margin": 2131,
+      "ebitda_margin": 824,
+      "asset_turnover": 5
+    }
+  },
+  "split_records": {
+    "fitting": 25681,
+    "tuning": 1427,
+    "calibration": 1427,
+    "validation": 3171
+  },
+  "versions": {
+    "python": "3.12.14",
+    "numpy": "2.3.5",
+    "pandas": "2.2.3",
+    "scikit-learn": "1.8.0",
+    "scipy": "1.17.0",
+    "matplotlib": "3.10.8",
+    "seaborn": "0.13.2"
+  },
+  "parameters": {
+    "seed": 42,
+    "pca_components": 128,
+    "logistic_C": 10,
+    "logistic_max_iter": 1000,
+    "knn_neighbors": 15,
+    "knn_weights": "distance",
+    "knn_n_jobs": 2,
+    "numerical_threads": 2,
+    "lr_weight": 0.25,
+    "review_threshold": 0.8
+  },
+  "tuning_weighted_f1": {
+    "0.25": 0.791846708172622,
+    "0.5": 0.7836858592184739,
+    "0.75": 0.7822473867928044
+  },
+  "pca_variance": {
+    "two_components": 0.2528710663318634,
+    "all_128_components": 0.8762428164482117
+  },
+  "model_metrics": {
+    "Logistic regression": {
+      "Accuracy": 0.7814569536423841,
+      "Weighted F1": 0.777787776790241,
+      "Macro F1": 0.7175153844706419
+    },
+    "k-NN": {
+      "Accuracy": 0.7770419426048565,
+      "Weighted F1": 0.771401096571897,
+      "Macro F1": 0.7104706791072664
+    }
+  },
+  "confidence_metrics": {
+    "Raw ensemble": {
+      "Weighted F1": 0.7808814718742704,
+      "Brier": 0.13737950519084466,
+      "Official score": 0.6736043616554847
+    },
+    "Text-calibrated ensemble": {
+      "Weighted F1": 0.7808814718742704,
+      "Brier": 0.13592274146761685,
+      "Official score": 0.6747419214558518
+    },
+    "Financial-calibrated ensemble": {
+      "Weighted F1": 0.7808814718742704,
+      "Brier": 0.135584565225789,
+      "Official score": 0.6750059970173232
+    },
+    "Logistic regression": {
+      "Weighted F1": 0.777787776790241,
+      "Brier": 0.13708709178287137,
+      "Official score": 0.6711631124458017
+    },
+    "k-NN": {
+      "Weighted F1": 0.771401096571897,
+      "Brier": 0.14149622183199992,
+      "Official score": 0.6622507558899119
+    }
+  },
+  "reliability": [
+    {
+      "Bin": "(0.2, 0.3]",
+      "Count": 11,
+      "Mean_confidence": 0.2807484268695054,
+      "Accuracy": 0.36363636363636365
+    },
+    {
+      "Bin": "(0.3, 0.4]",
+      "Count": 128,
+      "Mean_confidence": 0.36446075199995737,
+      "Accuracy": 0.4375
+    },
+    {
+      "Bin": "(0.4, 0.5]",
+      "Count": 258,
+      "Mean_confidence": 0.44968998077167655,
+      "Accuracy": 0.4496124031007752
+    },
+    {
+      "Bin": "(0.5, 0.6]",
+      "Count": 235,
+      "Mean_confidence": 0.5484727411246886,
+      "Accuracy": 0.5574468085106383
+    },
+    {
+      "Bin": "(0.6, 0.7]",
+      "Count": 237,
+      "Mean_confidence": 0.6493520459615758,
+      "Accuracy": 0.6286919831223629
+    },
+    {
+      "Bin": "(0.7, 0.8]",
+      "Count": 300,
+      "Mean_confidence": 0.7524137677306847,
+      "Accuracy": 0.7233333333333334
+    },
+    {
+      "Bin": "(0.8, 0.9]",
+      "Count": 617,
+      "Mean_confidence": 0.8578559745642886,
+      "Accuracy": 0.820097244732577
+    },
+    {
+      "Bin": "(0.9, 1.0]",
+      "Count": 1385,
+      "Mean_confidence": 0.9374495426551546,
+      "Accuracy": 0.9487364620938629
+    }
+  ],
+  "review": {
+    "threshold": 0.8,
+    "flagged_count": 1169,
+    "flagged_share": 0.3686534216335541,
+    "total_errors": 678,
+    "errors_captured": 496,
+    "flagged_accuracy": 0.5757057313943541,
+    "unflagged_accuracy": 0.9090909090909091
+  },
+  "repeated_embeddings": {
+    "seen_count": 455,
+    "seen_accuracy": 0.9934065934065934,
+    "unseen_count": 2716,
+    "unseen_accuracy": 0.7514727540500736
+  },
+  "model_errors": {
+    "both_wrong": 520,
+    "only_lr_wrong": 173,
+    "only_knn_wrong": 187
+  },
+  "executions": {
+    "submission": {
+      "label": "main",
+      "code_cells_executed": 19,
+      "plots": 8,
+      "output_blocks": 34,
+      "wall_seconds_including_verification": 87.27664453400212,
+      "peak_runner_plus_kernel_rss_bytes_upper_bound": 1594036224,
+      "scope": "Linux cloud runner plus Jupyter kernel; includes verification and extra instructor example; not a laptop benchmark"
+    },
+    "annotated": {
+      "label": "study",
+      "code_cells_executed": 19,
+      "plots": 8,
+      "output_blocks": 34,
+      "wall_seconds_including_verification": 86.39040234300046,
+      "peak_runner_plus_kernel_rss_bytes_upper_bound": 1598046208,
+      "scope": "Linux cloud runner plus Jupyter kernel; includes verification and extra instructor example; not a laptop benchmark"
+    },
+    "baseline": {
+      "label": "baseline",
+      "code_cells_executed": 14,
+      "plots": 8,
+      "output_blocks": 36,
+      "wall_seconds_including_verification": 80.78875459499977,
+      "peak_runner_plus_kernel_rss_bytes_upper_bound": 1596604416,
+      "scope": "Linux cloud runner plus Jupyter kernel; includes verification; baseline has no extra instructor example; not a laptop benchmark"
+    }
+  },
+  "verification": {
+    "fresh_kernels": true,
+    "all_notebook_cells_executed": true,
+    "no_error_outputs": true,
+    "original_skeleton_markdown_scorer_and_example_preserved": true,
+    "clean_and_annotated_ast_identical": true,
+    "main_study_baseline_predictions_identical": true,
+    "main_study_baseline_probabilities_features_confidence_match_tolerance": 1e-10,
+    "inference_without_targets_full_validation_match": true,
+    "split_probability_confidence_scorer_order_missing_finances_checks": "passed"
+  },
+  "submission_code_sha256": "7ba953b03ab06404682c440b6295c137beac5b6eae4b60cbb9b92e1566fa829e",
+  "limitations": [
+    "Private-test performance and the final bonus cutoff are unknown.",
+    "Validation has been inspected during earlier development.",
+    "Company-ID separation does not guarantee entirely new descriptions.",
+    "Resource measurements are from the Linux cloud, not the student laptop."
+  ]
+}

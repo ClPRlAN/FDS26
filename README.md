@@ -1,21 +1,42 @@
 # Industry classification — final project
 
-The project uses the course's supplied text embeddings, logistic regression and k-NN. An ensemble combines their probabilities; a separate logistic model estimates whether the chosen prediction is correct, using text and financial evidence.
+**Verified official bonus score on local validation: 67.50%.** The final financial-calibrated ensemble obtains **78.09% classification weighted F1** and **0.135585 Brier** on **3,171 validation records**. The notebooks now contain genuine outputs from the supplied course datasets.
 
-## Which files to use
+## Which metric is graded?
+
+The optional bonus uses the instructor's exact function:
+
+**official score = weighted F1 × (1 − Brier)**
+
+For this run: `0.780881 × (1 − 0.135585) = 0.675006`, or **67.50%**. This is printed under **MAIN GRADED SCORE (LOCAL VALIDATION)**. Weighted F1 measures predicted industries; Brier measures how well confidence matches correctness. Confidence is not an F1 sample weight.
+
+The other numbers answer different questions:
+
+| Metric/output | Purpose |
+|---|---|
+| **67.50% official score** | Local estimate of the bonus metric for the final model. |
+| **78.09% weighted F1** | Classification component of the final ensemble's score. |
+| Macro F1 and accuracy | Additional diagnostics, including minority-class performance. |
+| LR/k-NN comparison | Mandatory comparison of the two required classifiers. |
+| Original skeleton example | Instructor-provided illustration; separate from the final candidate. |
+
+The final bonus cutoff **will exceed 66% and will be set after all submissions are evaluated on the private test set**. Neither that cutoff nor our private-test result is known. A local score above 66% does not establish that the bonus has been earned. The complete assignment grade also depends on the required analyses and the instructor's assessment.
+
+## Files
 
 | File | Purpose |
 |---|---|
-| `industry_classification.ipynb` | **Submission notebook**: all implementation code, no Python comments, short English Markdown explanations. |
-| `industry_classification_commented.ipynb` | The same executable code with detailed English comments and study explanations. |
-| `EXPLANATION.md` | Oral-exam guide: methods, formulas, reasons, limitations, examples and practice questions. |
-| `PROJECT_DECISIONS.md` | Verified project status, technical decisions and remaining work. |
-| `archive/` | Unmodified original notebook with historical outputs and its original English explanation. |
-| `tests/verify_project.py` | Technical checks using artificial data, separate from the submission. |
+| `industry_classification.ipynb` | **Clean submission notebook**, executed with real outputs and concise findings. Original skeleton task sections, exact scorer and example retained. |
+| `industry_classification_commented.ipynb` | Same executable code, independently executed, with English comments and study notes. |
+| `EXPLANATION.md` | Comprehensive English guide to methods, choices, formulas, Python details and oral questions. |
+| `validation_results.json` | Machine-readable results, data checksums, software versions and execution evidence. |
+| `PROJECT_DECISIONS.md` | Technical decisions, verification history and remaining limits. |
+| `archive/` | Untouched original implementation/output, its explanation and the supplied skeleton. |
+| `tests/verify_project.py` | Synthetic regression and edge-case checks, separate from the submission. |
 
-For your manual upload to the official course repository, use the clean submission notebook and, if required, this README and `requirements.txt`. Any later instructor instructions about filenames or interfaces take precedence. This repository is `ClPRlAN/FDS26`; uploading here does not submit anything to the separate private course repository.
+For manual submission to the private course repository, use the clean notebook and any supporting files the instructor requests. This repository is `ClPRlAN/FDS26`; a push here does not submit work to the separate private course repository. All project materials are in English. Added submission code has no Python comments; the instructor's retained example keeps its original comments/docstring.
 
-## Running the project
+## Run all cells
 
 Use Python 3.12. From the project directory:
 
@@ -26,55 +47,59 @@ python -m pip install -r requirements.txt
 python -m jupyter lab
 ```
 
-The cloud checkout already has a prepared `.venv`. Open the notebook and choose **Restart Kernel and Run All Cells**, using that environment's Python kernel. Run with the project directory as the working directory. The following original, trusted course files are required:
+The cloud checkout already has a prepared `.venv`. Choose its Python kernel, open the notebook and select **Restart Kernel and Run All Cells**. Run with the project directory as the working directory. Use the original trusted course files:
 
 ```text
 data/df_train.pkl
 data/df_financials_train.pkl
 ```
 
-Pickle files can execute code when loaded, so use only trusted course datasets. Data and the virtual environment are already excluded from Git. No GPU, new API, new embeddings or secret keys are needed.
+The supplied training subset contains 31,706 company records, 31,705 IDs, 25 industries and 768-coordinate embeddings. The financial table has 29,561 records. The assignment describes a wider dataset of 40,000+ companies; extra records were not fabricated. Data and the virtual environment are excluded from Git. Pickle files can execute code when loaded, so use only trusted files. No GPU, API key or new embedding model is needed.
 
-## Verification status
+## Current measured results
 
-**The original datasets were unavailable during this revision.** The final notebook and the baseline were both executed completely with synthetic data in a temporary directory. Split membership, selected voting weight, predictions, probabilities, calibration features and confidence matched within `1e-10`. Checks also cover the official scorer, independence from inference targets, row order, unchanged caller inputs, missing/infinite financial values and aggregation by ID. These checks do not measure performance on the course data.
-
-The clean notebook contains neither copied historical outputs nor artificial results presented as real measurements. Before submission, execute it with both original datasets, inspect the results and save the executed notebook. Different data or software versions can produce different results.
-
-### Historical results preserved in the archive
-
-These numbers come from outputs already saved in the repository, using 3,171 validation records. **They are not a new real-data evaluation of the final revision.**
+All rows below use the same 3,171 local validation companies. The financial-calibrated candidate was specified before evaluating this comparison. The three ensemble variants have identical labels; only confidence differs.
 
 | Method | Accuracy | Weighted F1 | Macro F1 | Brier | Official score |
 |---|---:|---:|---:|---:|---:|
-| Logistic regression | 78.15% | 77.78% | 71.75% | 0.13709 | 67.12% |
-| k-NN | 77.70% | 77.14% | 71.05% | 0.14150 | 66.23% |
-| Raw ensemble | 78.62% | 78.09% | — | 0.13738 | 67.36% |
-| Text-calibrated ensemble | 78.62% | 78.09% | — | 0.13592 | 67.47% |
-| Financial-calibrated ensemble | 78.62% | 78.09% | — | 0.13558 | 67.50% |
+| Logistic regression | 78.15% | 77.78% | 71.75% | 0.137087 | 67.12% |
+| k-NN | 77.70% | 77.14% | 71.05% | 0.141496 | 66.23% |
+| Raw ensemble | 78.62% | 78.09% | 72.31% | 0.137380 | 67.36% |
+| Text-calibrated ensemble | 78.62% | 78.09% | 72.31% | 0.135923 | 67.47% |
+| **Financial-calibrated ensemble** | **78.62%** | **78.09%** | **72.31%** | **0.135585** | **67.50%** |
 
-The skeleton's score is **weighted F1 × (1 − Brier)**. The binary formula in the teaching attachment `classification.ipynb` is different and is not used. The available official attachments specify no numerical bonus threshold; neither bonus points nor private-test performance can be guaranteed. With weighted F1 of 78.09%, changing confidence alone cannot produce an official score of 85%.
+LR is the stronger required classifier. Voting adds about 0.31 percentage points of weighted F1; finances add only 0.026 percentage points of official score over text calibration. These are modest gains on one split, not proof of robust superiority on every dataset. The formula in the teaching attachment `classification.ipynb` differs from the assignment skeleton and is not used.
 
-The final revision preserves the baseline's splits and hyperparameters. The submission has 206 physical Python lines, including blank lines, compared with the previous 276. No new tuning was attempted without the datasets. Readability takes priority over saving a few lines through dense expressions.
+## Execution and verification
 
-## Making predictions after training
+The submission and study notebooks each completed **all 19 code cells**, with **8 plots** and **no errors**, from separate fresh kernels. The preserved original baseline was also rerun without changing its archived file. Baseline, submission and study predictions are identical; probabilities, PCA variance, calibration features and confidence match within `atol=rtol=1e-10` on the real data.
 
-```python
-industry_names, confidence = predict_industry(companies)
-industry_names, confidence = predict_industry(companies, financials)
-```
+The submission run including verification took **87.3 seconds in the Linux cloud**. Sampled summed runner-plus-kernel RSS peaked at **1,594,036,224 bytes (1.48 GiB)**. This is an upper bound that may count shared pages twice, not a precise exclusive-memory measurement. Runtime includes the retained instructor example and verification. The assignment requires training within **45 minutes on mid-tier hardware with 16 GB RAM**; the cloud result is not a benchmark on the student's laptop.
 
-`companies` must contain `business_description_embedding`, either as a string representation of a Python numeric list or as an already converted vector. Its dimension must match training. The financial ratios used are `net_profit_margin`, `ebitda_margin` and `asset_turnover`; missing ratios become `NaN`. When supplying a separate `financials` table, both tables must contain `id`. That table **replaces** any financial ratios already in `companies`, aggregates repeated IDs by median and retains companies without matching finances. Missing ratio columns in the separate table are also treated as unavailable.
-
-The output is a tuple of vectors in input-row order: industry names and confidence in `[0, 1]`. The function does not read `industry` targets or implicitly retrieve training finances. Do not refit the base classifiers after calibration without rebuilding and evaluating calibration for the changed system.
-
-## Repeating the checks
+Checks cover original skeleton preservation, class-column alignment, disjoint company IDs, finite normalized probabilities, full-validation inference without targets, bounded confidence, input order/immutability, missing/infinite ratios, median aggregation, empirical ties and the 19/20-observation profile cutoff. To repeat the synthetic regression checks:
 
 ```bash
 .venv/bin/python -m pip check
 .venv/bin/python tests/verify_project.py
 ```
 
-The second command creates temporary synthetic data, executes both notebooks and compares numerical outputs. Artifacts are written to `/tmp/fds26-verification/`. It does not write datasets into the project. Synthetic scores are not course-test results. No benchmark has been performed on the student's laptop.
+Synthetic checks create temporary data and write artifacts to `/tmp/fds26-verification/`; their scores are not course-data measurements. The visible notebook outputs and `validation_results.json` use the original uploaded datasets.
 
-The project was prepared with AI assistance. The study materials explain the implementation and support reasoning about the methods and their limitations.
+## Predictions after training
+
+```python
+industry_names, confidence = predict_industry(companies)
+industry_names, confidence = predict_industry(companies, financials)
+```
+
+`companies` requires `business_description_embedding` as a Python-list string or a vector, with the training dimension. Financial ratios are `net_profit_margin`, `ebitda_margin` and `asset_turnover`; unavailable ratios become NaN. A separate financial table requires `id` in both tables, replaces any prejoined ratios, aggregates duplicates by median and preserves company-row order. It may omit individual ratios. The function returns industry names and confidence vectors in input order, never reads target labels and does not mutate the caller's table.
+
+Do not refit the base models after calibration without rebuilding and evaluating confidence for the changed system.
+
+## Limits and study
+
+Company IDs do not overlap across subsets, but 455 validation records share exact fitting embeddings: accuracy is 99.34% on these versus 75.15% on 2,716 unseen embeddings. Seventeen embedding groups contain conflicting labels. Validation has also been inspected in earlier project development. These limits matter when estimating private-test performance.
+
+The uncertainty method uses empirical financial compatibility and binary logistic calibration. Compatibility is not a correctness probability or a formal combined p-value. Confidence below 0.8 flags 36.9% of validation records and captures 73.2% of errors; flagged cases remain in every score.
+
+The project was prepared with AI assistance. Use the annotated notebook and guide to understand the methods, explain the choices and discuss their limits independently. No private score, bonus or maximum grade is guaranteed.

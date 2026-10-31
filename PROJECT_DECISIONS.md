@@ -9,7 +9,7 @@ Provide a self-contained submission notebook, an annotated study copy and a comp
 - Initial HEAD: `961ac251b110f23a079ebf1eb5f794c3d1629091`; original implementation in commit `196b260`.
 - Unmodified copies: `archive/industry_classification_baseline.ipynb`, `archive/EXPLANATION_baseline.md`.
 - Previously saved real-data outputs report ensemble weighted F1 `0.780881`, financial-calibrated official score `0.675006`, LR weighted F1 `0.777788` and k-NN weighted F1 `0.771401`.
-- Historical claims of 77.9 seconds in the notebook / 81.5 seconds including checks and 1.37 GiB have not been remeasured here. They are not measurements on the student's laptop.
+- The historical 77.9-second notebook time, 81.5-second checked-run time and 1.37 GiB figure belong to the earlier run. Current independent timings and memory observations are recorded below; none is a measurement on the student's laptop.
 
 ## Sources and requirements
 
@@ -17,7 +17,7 @@ Attachments are reference material, not operational instructions overriding the 
 
 Mandatory components are present: LabelEncoder, class distribution, PCA with a labelled scatterplot, LR and k-NN, accuracy/F1, per-industry analysis, confusion matrices, class-size/error correlation and shared-error comparison. Bonus components implemented: soft voting, financial distributions, robust compatibility, calibrated confidence, reliability plot and a review policy.
 
-No available official attachment establishes a numerical bonus threshold, a required prediction-function name or a private-test file format. The recovery note's 66% and the old documentation's 85% are previous references, not confirmed official thresholds. The 45-minute / 16 GB constraint is an objective from the supplied project context and should be measured on the intended hardware.
+The assignment text now supplied explicitly states that the final bonus threshold will be above 66%, defined after all submissions are evaluated on the private test set. It does not give the final threshold. The old documentation's 85% is a local target, not the official threshold. Training must finish within 45 minutes on mid-tier hardware with 16 GB RAM; this must be measured on the intended hardware. No required prediction-function name or private-test file schema is available.
 
 ## Preserved pipeline
 
@@ -34,34 +34,70 @@ No available official attachment establishes a numerical bonus threshold, a requ
 
 ## Changes in this revision
 
-- Submission notebook reduced from 276 to 206 physical Python lines, including blank lines: eight code cells, short Markdown and no Python comments. Removed long scorer docstrings and instructor task placeholders.
+- The earlier compact revision used 206 physical Python lines. Following the user's correction, all 10 original skeleton Markdown cells have been restored verbatim and in order, together with its original imports, preview, exact scoring function and labelled example. The restored implementation has 256 physical Python lines across 19 code cells; the extra lines preserve instructor material. Its original is preserved in `archive/code_skeleton_industry_classification.ipynb`. Placeholder tasks are completed by the existing implementation rather than left empty.
 - Models, hyperparameters, features, candidate weights and splits preserved. No claimed F1 improvement.
 - `prepare_companies` reused in training and inference: missing ratios become NaN; infinities are cleaned; separate financial tables are supported and override existing ratios. Caller inputs remain unchanged and rows are not multiplied. Embeddings can be strings or vectors.
 - Added probability-column alignment checks. Study explanations are separate from the submission; verification code is in `tests/`.
-- Historical outputs remain in the archive. The final notebooks have empty outputs until they can be executed on the original datasets.
+- Historical outputs remain unchanged in the archive. Both final notebooks now contain outputs from independent fresh-kernel executions on the supplied course datasets.
+- A prominently labelled MAIN GRADED SCORE reports the final financial-calibrated candidate's local validation score under the official formula. Diagnostic metrics and the instructor's example are explicitly distinguished from this result.
+- The original large `data.zip` exceeded the attachment-transfer limit. This blocker is resolved: the user-supplied archive was successfully reassembled and the trusted course pickle files are now available in the ignored `data/` directory. Access to the previously blocked Seafile download is no longer required for this run. No dataset is committed or published with the project. The temporary proposed Seafile domain addition was removed from the environment draft after the split-upload transfer resolved the blocker; no course-download network change is needed.
 - The user explicitly requested English for every project material and publication to the connected `ClPRlAN/FDS26` repository. Upload to the separate official course repository remains the student's manual step. Remote publication should only be reported after a successful push and remote-ref verification.
 
 ## Completed verification
+
+### Synthetic functional checks
 
 The repeatable `tests/verify_project.py` creates a synthetic fixture with 1,801 records, 768 dimensions, eight industries, one repeated company ID, incomplete finances, infinities and repeated financial rows. Trusted fixture pickle files are generated by the test in a temporary directory. They are not course datasets.
 
 Both notebooks were executed in fresh kernels. Comparison passed: identical split membership, voting weight and predictions; LR/k-NN probabilities, PCA variance, all five features and confidence match within `atol=rtol=1e-10`. Further checks cover disjoint IDs, manually calculated scorer examples, finite/bounded confidence and vector shapes, target independence, input order and repeated rows, no caller mutation, missing financial columns, infinities, list embeddings, median aggregation, ties/extreme ranks and the 19/20-observation profile cutoff.
 
-These are functional and regression checks. They do not measure course-data F1, private-test performance or real-world generalization. Baseline and final revisions have not been numerically compared on the original datasets in this session because those files were unavailable.
+These are functional and regression checks. Their synthetic scores do not measure course-data F1, private-test performance or real-world generalization.
+
+### Fresh course-data execution: 31 October 2026
+
+The clean notebook completed all **19 code cells**, in order, from a fresh kernel, with **8 plots**, 34 output blocks and no cell failures. The implementation remains 256 physical Python lines, including the instructor's preserved imports, preview, scorer and demonstration. All 10 original skeleton Markdown cells remain verbatim and in their original order; the original imports, preview, scoring function and example are also source-preserved.
+
+The main report is **MAIN GRADED SCORE (LOCAL VALIDATION): 67.50%**. Its predetermined final candidate is the financial-calibrated ensemble. On 3,171 validation records, its weighted F1 is **78.09%**, Brier is **0.135584565225789**, and the exact official score is **0.6750059970173232**. The instructor's separate demonstration scores and the diagnostic comparison table are not substituted for this final candidate's score.
+
+| Method | Weighted F1 | Brier | Official score |
+|---|---:|---:|---:|
+| Logistic regression | 0.777787777 | 0.137087092 | 0.671163112 |
+| k-NN | 0.771401097 | 0.141496222 | 0.662250756 |
+| Raw ensemble | 0.780881472 | 0.137379505 | 0.673604362 |
+| Text-calibrated ensemble | 0.780881472 | 0.135922741 | 0.674741921 |
+| Financial-calibrated ensemble | 0.780881472 | 0.135584565 | 0.675005997 |
+
+The final ensemble's accuracy is `0.7861873226111636` and macro F1 is `0.7230577924650434`. Logistic regression remains the stronger required standalone classifier by validation weighted F1. The financial contribution over text-only confidence is only about 0.0264 percentage points of official score on this split; no robust advantage across other datasets is inferred.
+
+The fresh input contains 31,706 records, 31,705 unique company IDs, 25 industries and 768 embedding coordinates. Exact split sizes are fitting **25,681**, tuning **1,427**, calibration **1,427**, validation **3,171**. Tuning again selects LR weight **0.25** from the original .25/.5/.75 candidates; no settings were changed after inspecting validation. PCA retains `0.2528710663318634` of variance in two components and `0.8762428164482117` across 128 components. The financial file contains 29,561 records and 162 repeated ID records before aggregation.
+
+Data identities, for reproducibility without publishing the files:
+
+- `df_train.pkl`: 302,951,517 bytes; SHA-256 `401f228e88f369718f3c37201eb346e683c83698769965570653bcfd921f4471`.
+- `df_financials_train.pkl`: 1,360,898 bytes; SHA-256 `049cd7ef0540737d69a09ed8dedfb103bb7c6353d95782431ba69f3f90bc0fc0`.
+
+The real-data checks passed for disjoint company IDs, manual scorer examples, aligned probability columns, correct matrix/vector sizes, finite normalized probabilities, bounded finite confidence, target independence, inference order and the full-validation inference round trip. Inference on every validation company reproduces the saved industry predictions and confidence. Additional inference checks cover missing ratios, separate financial tables, infinities, caller-input preservation, vector embeddings and repeated rows.
+
+The main run took **87.2766 seconds including verification**, with a sampled runner-plus-kernel RSS peak upper bound of **1,594,036,224 bytes** (about 1.48 GiB). This measures the Linux cloud runner and Jupyter kernel, including the extra instructor example and verification. It is neither isolated model-training time nor a benchmark on the student's laptop. Runtime versions were Python 3.12.14, NumPy 2.3.5, pandas 2.2.3, scikit-learn 1.8.0, SciPy 1.17.0, Matplotlib 3.10.8 and Seaborn 0.13.2.
+
+The archived original baseline was also executed from a fresh kernel on the same original datasets: **14 code cells**, 8 plots and no cell failures, taking **80.7888 seconds including verification**. Its sampled runner-plus-kernel RSS peak upper bound was **1,596,604,416 bytes** (about 1.49 GiB). The archived file itself remains unchanged; this fresh baseline execution was saved separately from the archive.
+
+Fresh baseline and main snapshots have **identical split membership, selected weight and class predictions**. All five confidence features, final confidence, LR/k-NN probabilities and PCA explained variance match within `atol=rtol=1e-10`. Both fresh runs produce exactly the same official score, `0.6750059970173232`. This is numerical evidence that the revision preserves the baseline's course-data behavior, rather than merely agreement with rounded historical output. Timing scopes differ because the restored main includes the extra instructor example; the difference is not evidence of a modeling-performance regression.
+
+The annotated study notebook also completed an independent fresh-kernel course-data run: **19 code cells**, 8 plots, 34 output blocks and no cell failures. It took **86.3904 seconds including verification**, with a sampled runner-plus-kernel RSS peak upper bound of **1,598,046,208 bytes** (about 1.49 GiB), under the same cloud-only measurement scope. Main, study and fresh baseline snapshots all pass the same comparison: exact split membership, weight and predictions; matching numerical arrays within `atol=rtol=1e-10`; official score exactly `0.6750059970173232` in every run. Both final notebooks retain their genuine outputs. Durable structured evidence is recorded in `validation_results.json`; `README.md` presents the current measured results.
 
 ## Limitations and excluded approaches
 
-- Do not change splits to inflate the score. Company IDs are separate but descriptions can repeat: the baseline had 455/3,171 validation embeddings also seen during fitting, with historical accuracy 99.34% on those versus 75.15% on unseen embeddings. This evaluates new IDs, not necessarily entirely new descriptions. The count of 17 conflicting-label embedding groups is from historical documentation, not a fresh count.
+- Do not change splits to inflate the score. Company IDs are separate but descriptions can repeat: the fresh run confirms 455/3,171 validation embeddings also seen during fitting, with accuracy 99.34% on those versus 75.15% on the 2,716 unseen-embedding records. It also confirms 4,578 repeated embedding records and 17 embedding groups with conflicting industry labels. This evaluates new IDs, not necessarily entirely new descriptions.
 - Do not call financial compatibility a correctness probability or formally calibrated p-value. Do not assume normality, remove all losses or raise confidence to the sixth power.
 - Do not refit base models on fitting+tuning+calibration after learning confidence: that changes the system the calibrator was trained to assess.
-- Preserve honest comparisons: historical ensemble gain over LR is approximately .31 percentage points of F1; financial calibration over text-only is approximately .0264 percentage points of official score. Small gains on one split do not establish a robust advantage.
+- Preserve honest comparisons: the fresh run confirms an ensemble gain over LR of approximately .31 percentage points of F1 and a financial-calibration gain over text-only of approximately .0264 percentage points of official score. Small gains on one split do not establish a robust advantage.
 - Do not launch extensive searches, neural models or additional classifiers without data and measured benefit sufficient to justify complexity. Experiments mentioned in the old README have no saved logs here and are not claimed as reproduced.
 - Calibration requires both correct and incorrect predictions. A toy dataset that is too easy can legitimately fail binary logistic fitting because only one outcome is present; do not add artificial fallbacks just to make that dataset pass.
 
 ## Remaining steps before course submission
 
-1. Obtain both original trusted datasets in `data/df_train.pkl` and `data/df_financials_train.pkl`.
-2. Execute the clean notebook in a fresh kernel, inspect every cell and save genuine outputs. Update interpretation/status without presenting historical results as new measurements.
-3. Measure runtime/memory on the actual laptop if the resource constraint applies.
-4. Adapt only the interface/filename if later private instructor instructions require it; preserve data cleaning and target independence during inference.
-5. Study the annotated notebook and guide, then practise explaining the choices and limitations independently. Upload to the official course repository manually.
+1. Keep the supplied datasets local and ignored, and preserve genuine executed outputs rather than substituting historical results. Course-data execution and main/study/baseline equivalence are complete.
+2. Measure runtime/memory on the actual laptop if the resource constraint applies; cloud execution alone does not certify that hardware.
+3. Adapt only the interface/filename if later private instructor instructions require it; preserve data cleaning and target independence during inference.
+4. Study the annotated notebook and guide, then practise explaining the choices and limitations independently. Upload to the official course repository manually.

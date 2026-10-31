@@ -2,7 +2,7 @@
 
 This is the study guide. `industry_classification.ipynb` is the clean notebook to run and submit; its annotated version connects the code to the ideas explained here. The aim is to understand the sequence **data → model → prediction → evaluation**, rather than memorize answers.
 
-AI assistance was used to prepare the project. This guide is intended to help you explain the choices independently and verify them. Run the code, inspect the results and describe the limitations in your own words. The historical figures below are not a new execution on the real datasets.
+AI assistance was used to prepare the project. This guide is intended to help you explain the choices independently and verify them. Run the code, inspect the results and describe the limitations in your own words. The clean notebook has now been executed on the supplied real datasets: all 19 code cells completed and eight plots were produced. Section 20 reports these fresh local measurements, separately from private-test performance and laptop requirements.
 
 ### Where to start: five key concepts
 
@@ -59,7 +59,7 @@ The precise definitions depend on the dataset. EBITDA is not the same as net inc
 
 Only open pickle files from a trusted source: the format can execute code while loading. The model does not require additional data downloads or credentials.
 
-The previous execution contained 31,706 records, 31,705 distinct IDs, 25 industries and 768-coordinate embeddings. These are historical properties to check again against the actual files.
+The supplied datasets contain 31,706 description records, 31,705 distinct company IDs, 25 industries and 768-coordinate embeddings. These counts were checked again in the fresh real-data execution. There are 29,561 raw financial records before aggregation by ID.
 
 | Object | Shape in the original data | Meaning |
 | --- | --- | --- |
@@ -97,7 +97,7 @@ The notebook **does not apply additional L2 normalization**. Its k-NN uses Eucli
 
 First, we reserve about 10% for validation. Of the remaining 90%, we take about 90% for fitting: `0.9 × 0.9 = 0.81`. The remaining 9% is divided equally between tuning and calibration. `df_train` means the whole 90% development portion, rather than only the rows used to fit the base classifiers.
 
-The helper `split(companies, size)` returns two subsets using `GroupShuffleSplit`. The percentages are approximate because the split operates on groups and the number of rows is an integer. The previous execution had 25,681 fitting records, 1,427 tuning records, 1,427 calibration records and 3,171 validation records.
+The helper `split(companies, size)` returns two subsets using `GroupShuffleSplit`. The percentages are approximate because the split operates on groups and the number of rows is an integer. The fresh execution has 25,681 fitting records, 1,427 tuning records, 1,427 calibration records and 3,171 validation records.
 
 ### Why group by ID?
 
@@ -135,6 +135,8 @@ The median is less affected than the mean by one extremely large value. It is a 
 
 This aggregation uses only records of the same company, rather than statistics across companies or their targets. It differs from learning a global imputation value jointly from fitting and validation.
 
+The fresh data-quality check found 162 repeated financial IDs. Before infinities were treated as missing, the three ratios had 1,111, 19,279 and 1,363 missing observations, respectively. They also had 2,131, 824 and 5 infinite values. In particular, EBITDA margin was already missing for about 65.2% of the 29,561 raw financial records. Coverage is therefore a substantial part of the problem, rather than an exceptional edge case.
+
 **NaN does not mean zero:** a zero margin is a specific observation; a missing margin is unknown. We do not remove all negative values, because a loss-making company can still be classified correctly. We do not cut all extremes, because ranks limit their influence without assuming that they are false.
 
 ## 7. LabelEncoder and probability alignment
@@ -147,7 +149,7 @@ The columns of the LR and k-NN probability vectors must represent the same indus
 
 ## 8. Class imbalance
 
-The frequency chart shows how many training companies belong to each industry. In the historical data, `Materials` had 7,570 records, or 26.5% of training; the smallest class had 160. Always choosing the largest class would give nonzero accuracy, but would fail to recognize the others.
+The frequency chart shows how many training companies belong to each industry. In the current run, `Materials` has 7,570 records, or 26.5% of training; `Consumer Staples Distribution & Retail`, the smallest class, has 160. Always choosing the largest class would give nonzero accuracy, but would fail to recognize the others.
 
 Large classes provide more examples and contribute more to weighted F1. This does not mean that every large class is easy: semantic overlap, description quality and label errors also matter. Per-class reports and macro F1 expose weaknesses that a weighted average can hide.
 
@@ -163,7 +165,7 @@ PCA is unsupervised: it does not use industry labels. Therefore, substantial var
 
 `fit_transform(X_fit)` learns the mean and directions and projects fitting data. We use `transform` on other subsets so that they share the same coordinate system. A new `fit_transform` on validation would create a different transformation and use information that should be held aside.
 
-The scatterplot shows the first two of the 128 components because we can draw two axes. **k-NN uses all 128**, while LR uses every original coordinate. Historically, the first two retained 25.3% of variance and all 128 retained 87.6%. Those figures are neither accuracy percentages nor percentages of “information useful for the target.”
+The scatterplot shows the first two of the 128 components because we can draw two axes. **k-NN uses all 128**, while LR uses every original coordinate. In the current run, the first two retain 25.3% of variance and all 128 retain 87.6%. Those figures are neither accuracy percentages nor percentages of “information useful for the target.”
 
 A separated group of same-colored points suggests structure. Overlap in two dimensions does not prove that industries are indistinguishable in the original dimensions: the projection discards information.
 
@@ -211,7 +213,7 @@ prediction = the industry with the highest value in votes
 
 For a two-class example, LR gives `[0.8, 0.2]` and k-NN gives `[0.3, 0.7]`. With LR weight 0.25, the result is `[0.425, 0.575]`, so the second class wins. Weight 0.25 does not mean LR is correct 25% of the time: it specifies its contribution to the average.
 
-The notebook compares weights `0.25`, `0.5` and `0.75` using tuning weighted F1. The search is small and understandable; the best weight is frozen before calibration and evaluation. Historically it selected 0.25. A new run must print its own selection rather than copy the historical result.
+The notebook compares weights `0.25`, `0.5` and `0.75` using tuning weighted F1. The search is small and understandable; the best weight is frozen before calibration and ensemble evaluation. The fresh run selects 0.25: the three tuning F1 values are approximately 79.18%, 78.37% and 78.22%, respectively. These are tuning results, separate from the final validation F1.
 
 The best of three candidates is not necessarily a global optimum. We do not select on validation or optimize against the private test. An ensemble does not always improve performance: we check metrics and shared errors.
 
@@ -248,6 +250,10 @@ Rows represent true industries; columns represent predicted industries. The diag
 The most-confused industry pairs use absolute counts, which are affected by class size. The LR/k-NN comparison counts errors made by both, only LR and only k-NN. Complementary errors support trying a combination, but do not guarantee that it will help.
 
 The correlation between training size per industry and validation error describes an association rather than a cause. A negative correlation suggests fewer errors in larger classes; it does not prove that adding records alone would resolve semantic confusion.
+
+In the fresh validation, LR is stronger than k-NN overall: weighted F1 is 77.78% versus 77.14%, with accuracy 78.15% versus 77.70%. Their macro F1 values, 71.75% and 71.05%, show weaker results when every industry receives equal weight. LR recognizes Banks very well (97.17% F1) and Materials well (92.43%), but struggles with Commercial & Professional Services (37.59%), Household & Personal Products (44.44%) and Consumer Staples Distribution & Retail (46.15%). The last two estimates use only 19 and 18 validation records, respectively.
+
+Both models often predict Materials for true Capital Goods companies (28 LR cases, 33 k-NN cases), and Capital Goods for Technology Hardware & Equipment (21 and 24 cases). These related business activities are plausible sources of semantic confusion, although the counts alone do not prove a particular cause. The class-size/error correlations are −0.362 for LR and −0.284 for k-NN. Both models are wrong on 520 records; 173 errors belong only to LR and 187 only to k-NN. The ensemble can use some of those differences, but the substantial shared errors limit its gain.
 
 ## 14. What financial plots show
 
@@ -342,7 +348,9 @@ Reducing every confidence decreases the cost of errors but increases the cost of
 
 With confidence in `[0,1]`, Brier lies between zero and one; the score cannot exceed weighted F1. With 78% F1, no confidence transformation can produce an 85% official score. Before comparing a threshold, identify which metric it refers to.
 
-The attachments do not establish an official numerical bonus threshold. The 85% mentioned in the project's history is a local goal rather than a result or a grade guarantee. The 66% mentioned in the recovery text is not thereby an official skeleton threshold. Private-test results and the instructor's grading remain outside this evaluation.
+The assignment states that the final bonus threshold **will be above 66% and will be defined after all submissions have been evaluated on the private test set**. The final value is not known. A local validation score above 66% is therefore not proof of earning the bonus. The 85% mentioned in the project's history is a local target, not the official threshold. Private-test performance and the instructor's grading remain outside this evaluation.
+
+In the notebook, **MAIN GRADED SCORE (LOCAL VALIDATION)** identifies the official formula applied to the final financial-calibrated ensemble. It is the local estimate of the bonus metric. Other F1 values compare the required classifiers or diagnose minority-class performance; the original skeleton's example is labelled separately.
 
 ## 18. Reliability plots and human review
 
@@ -350,9 +358,13 @@ We divide confidence into bins of width 0.1. For each, we report its count, mean
 
 A point below the diagonal indicates overconfidence: for example, mean confidence 0.85 but accuracy 0.75. A point above indicates underconfidence. Ten records give a noisier estimate than a thousand, which is why counts are shown. The plot does not establish perfect calibration and depends on the chosen bins.
 
+The current highest bin contains 1,385 records, with mean confidence 93.74% and accuracy 94.87%. The 0.8–0.9 bin contains 617 records, with confidence 85.79% but accuracy 82.01%, so it is somewhat overconfident. The lowest populated bin has just 11 records and should not support a strong conclusion by itself.
+
 The policy flags confidence `< 0.8` for human review. This is the baseline's practical threshold, rather than one required by the instructor or optimized here on validation. Every company remains in the score: difficult cases are not removed to improve the metric.
 
 We examine how many companies would require review and how many errors the policy captures. Raising the threshold can find more errors but increases workload. A real application would need error costs, a review budget and validation of the policy.
+
+At the current 0.8 threshold, 1,169 of 3,171 records are flagged, or 36.9%. These include 496 of the ensemble's 678 errors, about 73.2%. Accuracy is 57.57% among flagged records and 90.91% among unflagged records. The policy therefore concentrates many errors in a smaller subset, at the cost of reviewing more than one third of predictions.
 
 ## 19. Inference without targets
 
@@ -366,29 +378,33 @@ The attachments do not specify a mandatory function name, a private-test schema 
 
 Models remain in memory after execution. The deliverable is a complete notebook, as in the skeleton, rather than a published Python package. Adding classes, frameworks or serialization without a specific need would lengthen the code without helping explain the methods.
 
-## 20. Historical results and limits of the evidence
+## 20. Current results and limits of the evidence
 
-This table comes from saved outputs of the previous version, using ID-grouped splitting with seed 42. **It is not a new execution on real datasets during this revision:** those files were unavailable. Tests using synthetic data check that the code works; they do not measure quality on real companies.
+The following results were freshly measured on the supplied original datasets, using ID-grouped splitting with seed 42. All 19 code cells completed in a fresh kernel, all eight plots were produced, and additional checks passed for split separation, probability and confidence bounds, the official scorer and prediction over the whole validation set. These numbers reproduce the previously archived metrics; they are now supported by a new execution rather than copied outputs.
 
-| Historical method | Accuracy | Weighted F1 | Macro F1 | Brier | Skeleton score |
+Synthetic regression tests serve a different purpose: they check code behavior and edge cases, rather than measure course-data performance. The table below uses the real course data.
+
+| Current method | Accuracy | Weighted F1 | Macro F1 | Brier | Skeleton score |
 | --- | ---: | ---: | ---: | ---: | ---: |
 | LR | 0.781457 | 0.777788 | 0.717515 | 0.137087 | 0.671163 |
 | k-NN | 0.777042 | 0.771401 | 0.710471 | 0.141496 | 0.662251 |
-| Raw ensemble | about 0.7862 | 0.780881 | — | 0.137380 | 0.673604 |
-| Text-calibrated ensemble | same classification | 0.780881 | — | 0.135923 | 0.674742 |
-| Financial-calibrated ensemble | same classification | 0.780881 | — | 0.135585 | 0.675006 |
+| Raw ensemble | 0.786187 | 0.780881 | 0.723058 | 0.137380 | 0.673604 |
+| Text-calibrated ensemble | 0.786187 | 0.780881 | 0.723058 | 0.135923 | 0.674742 |
+| Financial-calibrated ensemble | 0.786187 | 0.780881 | 0.723058 | 0.135585 | 0.675006 |
 
-LR was slightly stronger than k-NN among the two required classifiers. The ensemble gained about 0.31 percentage points of weighted F1 over LR. Finances gained about 0.026 percentage points of official score over text calibration: a very small change, rather than robust superiority established across datasets.
+The final candidate is the financial-calibrated ensemble. Its **main local graded score is 67.50%**, with **78.09% weighted F1**, Brier **0.135585** and **3,171 validation records**. The notebook prints these together under `MAIN GRADED SCORE (LOCAL VALIDATION)`. The instructor's retained logistic-regression example prints separate example scores; those are not the final candidate's result.
 
-The previous version reported about 78 seconds for the notebook and 81.5 with external checks in the cloud environment. These are historical measurements on that machine, rather than a benchmark repeated now or a guarantee for every laptop. The 45-minute budget comes from the project context and needs checking on the intended hardware.
+LR is slightly stronger than k-NN among the two required classifiers. The ensemble gains about 0.31 percentage points of weighted F1 over LR. Finances gain about 0.026 percentage points of official score over text calibration: a very small change, rather than robust superiority established across datasets. A local score above 66% is not proof of the bonus, because the final threshold will exceed 66% and is decided from private-test submissions afterward.
+
+The fresh cloud run took **87.28 seconds including verification and the additional instructor example**. The upper bound obtained by summing runner and kernel resident memory peaked at **1,594,036,224 bytes, about 1.48 GiB**; this can count shared pages more than once and is not a precise exclusive-memory measurement. These figures cover the Linux cloud runner plus Jupyter kernel, rather than training alone or the student's laptop. The assignment explicitly requires training within 45 minutes on mid-tier hardware with 16 GB RAM. That hardware-specific check remains to be performed on the intended machine.
 
 ### Repeated descriptions
 
-Splitting by ID does not prevent different companies from having identical embeddings. In the historical run, 455 validation records, about 14.35%, had an embedding seen in fitting. Ensemble accuracy was 99.34% on those records and 75.15% on the 2,716 unseen ones.
+Splitting by ID does not prevent different companies from having identical embeddings. The fresh run confirms that 455 validation records, about 14.35%, have an embedding seen in fitting. Ensemble accuracy is 99.34% on those records and 75.15% on the 2,716 unseen ones.
 
 The overall result therefore concerns new companies from a distribution containing repeated descriptions. It does not establish the same quality on entirely new descriptions. The notebook reports the distinction rather than hiding the limitation or removing cases from scoring.
 
-Grouping by description as well would be a stricter, different experiment whose figures would not be directly comparable. The historical data also contained identical embeddings with conflicting labels: a classifier using only those features cannot distinguish such rows based on information it does not have.
+Grouping by description as well would be a stricter, different experiment whose figures would not be directly comparable. The fresh data check finds 4,578 repeated embedding records and 17 identical-embedding groups with conflicting labels. A classifier using only those features cannot distinguish such rows based on information it does not have.
 
 ### Hyperparameters and experiments
 
@@ -465,7 +481,7 @@ They could help small classes but do not guarantee a better official metric. I a
 
 ### “Does an ensemble always improve performance?”
 
-No. It is plausible when models have complementary information, but needs testing. The historical advantage over LR was small.
+No. It is plausible when models have complementary information, but needs testing. The fresh real-data run confirms a small gain over LR, rather than a large improvement.
 
 ### “Why not select the weight using calibration?”
 
@@ -517,7 +533,7 @@ No: it is an estimate. Calibration is checked on groups with similar confidence,
 
 ### “Did you obtain the bonus?”
 
-That cannot be claimed. Historical outputs show about 78.09% F1 and 67.50% official score, which are different metrics. We do not have the private test or an established official threshold. The revised version still needs a real-data execution.
+That cannot be claimed. The fresh real-data validation gives about 78.09% F1 and 67.50% official score, which are different metrics. The final bonus threshold will be above 66% and set after all submissions; neither it nor our private-test score is known. We have verified the local result, not the bonus award.
 
 ### “What is the main weakness?”
 
@@ -525,11 +541,11 @@ One split, historically inspected validation, no private test and repeated descr
 
 ### “What would be a sensible next experiment?”
 
-First, run this version on the real datasets and compare it with the baseline. Then test one simple change using tuning and a recorded log. To investigate generalization, add a description-grouped evaluation while clearly stating that it measures a different scenario.
+The real-data run now reproduces the archived metrics. A sensible next experiment would test one simple change using tuning and a recorded log, rather than add complexity based on validation alone. To investigate generalization, add a description-grouped evaluation while clearly stating that it measures a different scenario. The laptop runtime check is also still useful.
 
 ## 23. How to prepare
 
-1. Run from a fresh kernel once both datasets are available. Read every table rather than only the final score.
+1. Read the saved outputs and then rerun from a fresh kernel using both supplied datasets. Inspect every table rather than only the final score.
 2. Draw the four subsets and identify which objects learn from each: PCA, classifiers, profiles, ensemble weight and calibrators.
 3. Combine two three-class probability vectors by hand, each summing to one; find the maximum, margin and predicted class.
 4. Calculate precision, recall, F1 and Brier with small numbers: they are different concepts.
