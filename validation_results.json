@@ -237,6 +237,7 @@
     "original_skeleton_markdown_currently_verbatim": false,
     "course_data_rerun": false,
     "metric_display_name": "Assignment validation score",
-    "legacy_metric_keys": "official_bonus_score and Official score retain the original numerical schema; they do not denote a bonus award"
+    "legacy_metric_keys": "official_bonus_score and Official score retain the original numerical schema; they do not denote a bonus award",
+    "original_skeleton_titles_preserved": true
   }
 }

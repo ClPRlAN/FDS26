@@ -140,7 +140,14 @@ def main():
     assert [ast.dump(ast.parse(s)) for s in clean_code] == [ast.dump(ast.parse(s)) for s in study_code]
     skeleton = nbformat.read(ROOT / 'archive/code_skeleton_industry_classification.ipynb', as_version=4)
     report = '\n'.join(c.source for c in nb.cells if c.cell_type == 'markdown')
-    assert '### Tasks:' not in report and '## Deliverables:' not in report
+    original_headings = [line for cell in skeleton.cells if cell.cell_type == 'markdown'
+                         for line in cell.source.splitlines()
+                         if line.startswith('#') and line.strip('# ').strip()]
+    for document in [nb, study]:
+        headings = iter(line for cell in document.cells if cell.cell_type == 'markdown'
+                        for line in cell.source.splitlines() if line.startswith('#'))
+        for expected in original_headings:
+            assert any(line == expected for line in headings), 'Missing original heading: ' + expected
     assert not any(c.source.strip() == '#' for c in nb.cells if c.cell_type == 'markdown')
     for topic in ['LabelEncoder', 'class frequencies', 'PCA', 'LogisticRegression',
                   'k-NN', 'macro F1', 'confusion matrices', 'shared errors',

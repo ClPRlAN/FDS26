@@ -346,9 +346,9 @@ Weighted F1 weights industries by support. **Confidence is not an F1 sample weig
 
 Reducing every confidence decreases the cost of errors but increases the cost of correct predictions. Neither absolute certainty nor constant caution is automatically a good strategy. For a group with true correctness frequency `p`, the expected loss of constant confidence `c` is `p(c−1)² + (1−p)c²`; its minimum occurs at `c=p`. This explains why we estimate correctness rather than inflate or shrink numbers arbitrarily.
 
-With confidence in `[0,1]`, Brier lies between zero and one; the score cannot exceed weighted F1. With 78% F1, no confidence transformation can produce an 85% assignment score. Before comparing a threshold, identify which metric it refers to.
+With confidence in `[0,1]`, Brier lies between zero and one. Confidence changes the Brier term; it cannot raise the assignment score above classification weighted F1.
 
-The assignment states that the final bonus threshold **will be above 66% and will be defined after all submissions have been evaluated on the private test set**. The final value is not known. A local validation score above 66% is therefore not proof of earning the bonus. The 85% mentioned in the project's history is a local target, not the official threshold. Private-test performance and the instructor's grading remain outside this evaluation.
+The assignment states that the final bonus threshold **will be above 66% and will be defined after all submissions have been evaluated on the private test set**. The final value is not known. A local validation score above 66% is therefore not proof of earning the bonus. Private-test performance and the instructor's grading remain outside this evaluation.
 
 In the notebook, **MAIN GRADED SCORE (LOCAL VALIDATION)** identifies the official formula applied to the final financial-calibrated ensemble. It is the local estimate of the bonus metric. Other F1 values compare the required classifiers or diagnose minority-class performance; the original skeleton's example is labelled separately.
 
@@ -414,7 +414,7 @@ The priority is compact, correct and explainable code. We avoid adding neural ne
 
 ## Development rationale and recorded comparisons
 
-This account reconstructs the logic of the final pipeline from saved evidence. It is not a complete chronological experiment diary. The editorial revision preserves the earlier real-data executions; it does not report a new training run.
+This account reconstructs the logic of the final pipeline from saved evidence. It is not a complete chronological experiment diary. The comparisons below use the recorded real-data executions.
 
 **A. Inspect the data and separate roles.** We first need meaningful units of evaluation. Company-ID grouping keeps repeated company records together, and four subsets separate fitting, voting-weight selection, calibration and evaluation. This protects against several forms of leakage, but the observed repeated embeddings show why ID separation does not ensure new descriptions. The split is not stratified and validation was inspected in earlier development.
 

@@ -26,7 +26,7 @@ The final bonus cutoff **will exceed 66% and will be set after all submissions a
 
 | File | Purpose |
 |---|---|
-| `industry_classification.ipynb` | **Clean submission notebook**, executed with real outputs and concise findings. Completed report covering the original assignment; exact scorer and example retained. |
+| `industry_classification.ipynb` | **Clean submission notebook**, executed with real outputs and concise findings. Completed report using the original skeleton titles; exact scorer and example retained. |
 | `industry_classification_commented.ipynb` | Same executable code, independently executed, with English comments and study notes. |
 | `EXPLANATION.md` | Comprehensive English guide to methods, choices, formulas, Python details and oral questions. |
 | `validation_results.json` | Machine-readable results, data checksums, software versions and execution evidence. |
@@ -34,7 +34,7 @@ The final bonus cutoff **will exceed 66% and will be set after all submissions a
 | `archive/` | Untouched original implementation/output, its explanation and the supplied skeleton. |
 | `tests/verify_project.py` | Synthetic regression and edge-case checks, separate from the submission. |
 
-For manual submission to the private course repository, use the clean notebook and any supporting files the instructor requests. This repository is `ClPRlAN/FDS26`; a push here does not submit work to the separate private course repository. All project materials are in English. Added submission code has no Python comments; the instructor's retained example keeps its original comments/docstring.
+For manual submission to the private course repository, use the clean notebook and any supporting files the instructor requests. This repository is `ClPRlAN/FDS26`; a push here does not submit work to the separate private course repository. The annotated notebook and guide provide detailed explanations alongside the concise submission report.
 
 ## Run all cells
 
@@ -102,6 +102,4 @@ Company IDs do not overlap across subsets, but 455 validation records share exac
 
 The uncertainty method uses empirical financial compatibility and binary logistic calibration. Compatibility is not a correctness probability or a formal combined p-value. Confidence below 0.8 flags 36.9% of validation records and captures 73.2% of errors; flagged cases remain in every score.
 
-The project was prepared with AI assistance. Use the annotated notebook and guide to understand the methods, explain the choices and discuss their limits independently. No private score, bonus or maximum grade is guaranteed.
-
-The editorial revision converts instructor directions into a completed report and adds the evidence-based development rationale to the study materials. Code and real-data outputs are unchanged; no new course-data training run was performed.
+The project was prepared with AI assistance. Use the annotated notebook and guide to understand the methods, explain the choices and discuss their limits independently. Private-test performance and bonus eligibility remain unverified.

@@ -109,3 +109,11 @@ The latest request supersedes verbatim preservation of instructor Markdown. The 
 Tests now check methodological coverage and absence of task directions instead of verbatim skeleton Markdown. Numerical and inference checks remain. validation_results.json preserves the earlier numerical provenance and records the Markdown revision separately; no new course-data execution is claimed.
 
 Current editorial checks passed: exact equality of all 19 complete code-cell objects (including outputs, counts and metadata) in each final notebook against commit 254acd6; unchanged archive files; main/study AST equality and original scorer/example preservation; pip dependency consistency; synthetic baseline/final execution and numerical equivalence within 1e-10. Synthetic runs produced 15 and 20 cells respectively including the added verification cell. A token-authenticated local Jupyter contents request also passed. The datasets were absent in this new instance, so no real-data retraining was needed or performed.
+
+## Skeleton-title correction
+
+The attached skeleton matches the archived source. Both final notebooks restore every nonempty original Markdown heading, with exact capitalization and heading level, in order. This includes the three Tasks headings and the optional Deliverables/Scoring headings. Their bodies describe completed work; the empty decorative heading remains omitted. Tests enforce the heading sequence separately from code/scorer preservation and methodological coverage.
+
+The professor-facing report follows the supplied assignment. Personal presentation preferences are not course requirements. README presentation metadata and the historical personal 85% target discussion in the study guide have been removed. Academic wording is assessed for clarity and evidence. ML code, recorded outputs and numerical execution provenance remain unchanged.
+
+Validation for this correction passed: exact original heading sequence in both notebooks, notebook schema validation, unchanged complete code-cell objects and real-data outputs, unchanged archives, and synthetic baseline/final equivalence within 1e-10. No course-data retraining was performed.
