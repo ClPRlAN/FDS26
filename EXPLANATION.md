@@ -36,7 +36,7 @@ The **features** are information available when making predictions. The **target
 
 `id` links records of the same company and connects the two tables. It is not a predictive feature. The numerical difference between two IDs does not measure how similar two companies are.
 
-We do not have the instructor's private test set. Good local validation does not guarantee the same private-test score or the award of bonus points.
+Local validation measures performance on the held-out companies; it does not establish performance on other datasets.
 
 ## 3. Files, tables and array shapes
 
@@ -348,9 +348,7 @@ Reducing every confidence decreases the cost of errors but increases the cost of
 
 With confidence in `[0,1]`, Brier lies between zero and one. Confidence changes the Brier term; it cannot raise the assignment score above classification weighted F1.
 
-The assignment states that the final bonus threshold **will be above 66% and will be defined after all submissions have been evaluated on the private test set**. The final value is not known. A local validation score above 66% is therefore not proof of earning the bonus. Private-test performance and the instructor's grading remain outside this evaluation.
-
-In the notebook, **MAIN GRADED SCORE (LOCAL VALIDATION)** identifies the official formula applied to the final financial-calibrated ensemble. It is the local estimate of the bonus metric. Other F1 values compare the required classifiers or diagnose minority-class performance; the original skeleton's example is labelled separately.
+In the notebook, **MAIN GRADED SCORE (LOCAL VALIDATION)** identifies the official formula applied to the final financial-calibrated ensemble. It reports the confidence-weighted validation metric. Other F1 values compare the required classifiers or diagnose minority-class performance; the original skeleton's example is labelled separately.
 
 ## 18. Reliability plots and human review
 
@@ -360,7 +358,7 @@ A point below the diagonal indicates overconfidence: for example, mean confidenc
 
 The current highest bin contains 1,385 records, with mean confidence 93.74% and accuracy 94.87%. The 0.8–0.9 bin contains 617 records, with confidence 85.79% but accuracy 82.01%, so it is somewhat overconfident. The lowest populated bin has just 11 records and should not support a strong conclusion by itself.
 
-The policy flags confidence `< 0.8` for human review. This is the baseline's practical threshold, rather than one required by the instructor or optimized here on validation. Every company remains in the score: difficult cases are not removed to improve the metric.
+The policy flags confidence `< 0.8` for human review. This is the baseline's practical threshold, not optimized here on validation. Every company remains in the score: difficult cases are not removed to improve the metric.
 
 We examine how many companies would require review and how many errors the policy captures. Raising the threshold can find more errors but increases workload. A real application would need error costs, a review budget and validation of the policy.
 
@@ -392,11 +390,11 @@ Synthetic regression tests serve a different purpose: they check code behavior a
 | Text-calibrated ensemble | 0.786187 | 0.780881 | 0.723058 | 0.135923 | 0.674742 |
 | Financial-calibrated ensemble | 0.786187 | 0.780881 | 0.723058 | 0.135585 | 0.675006 |
 
-The final candidate is the financial-calibrated ensemble. Its **main local graded score is 67.50%**, with **78.09% weighted F1**, Brier **0.135585** and **3,171 validation records**. The notebook prints these together under `MAIN GRADED SCORE (LOCAL VALIDATION)`. The instructor's retained logistic-regression example prints separate example scores; those are not the final candidate's result.
+The final candidate is the financial-calibrated ensemble. Its **main local graded score is 67.50%**, with **78.09% weighted F1**, Brier **0.135585** and **3,171 validation records**. The notebook prints these together under `MAIN GRADED SCORE (LOCAL VALIDATION)`. The separate logistic-regression example prints separate example scores; those are not the final candidate's result.
 
-LR is slightly stronger than k-NN among the two required classifiers. The ensemble gains about 0.31 percentage points of weighted F1 over LR. Finances gain about 0.026 percentage points of assignment score over text calibration: a very small change, rather than robust superiority established across datasets. A local score above 66% is not proof of the bonus, because the final threshold will exceed 66% and is decided from private-test submissions afterward.
+LR is slightly stronger than k-NN among the two required classifiers. The ensemble gains about 0.31 percentage points of weighted F1 over LR. Finances gain about 0.026 percentage points of assignment score over text calibration: a very small change, rather than robust superiority established across datasets.
 
-The fresh cloud run took **87.28 seconds including verification and the additional instructor example**. The upper bound obtained by summing runner and kernel resident memory peaked at **1,594,036,224 bytes, about 1.48 GiB**; this can count shared pages more than once and is not a precise exclusive-memory measurement. These figures cover the Linux cloud runner plus Jupyter kernel, rather than training alone or the student's laptop. The assignment explicitly requires training within 45 minutes on mid-tier hardware with 16 GB RAM. That hardware-specific check remains to be performed on the intended machine.
+The fresh cloud run took **87.28 seconds including verification and the additional scoring example**. The upper bound obtained by summing runner and kernel resident memory peaked at **1,594,036,224 bytes, about 1.48 GiB**; this can count shared pages more than once and is not a precise exclusive-memory measurement. These figures cover the Linux cloud runner plus Jupyter kernel, rather than training alone or the student's laptop. The assignment explicitly requires training within 45 minutes on mid-tier hardware with 16 GB RAM. That hardware-specific check remains to be performed on the intended machine.
 
 ### Repeated descriptions
 
@@ -555,10 +553,6 @@ Brier also penalizes correct predictions assigned low confidence. Expected loss 
 
 No: it is an estimate. Calibration is checked on groups with similar confidence, while also considering how many observations support each group.
 
-### “Did you obtain the bonus?”
-
-That cannot be claimed. The fresh real-data validation gives about 78.09% F1 and 67.50% assignment score, which are different metrics. The final bonus threshold will be above 66% and set after all submissions; neither it nor our private-test score is known. We have verified the local result, not the bonus award.
-
 ### “What is the main weakness?”
 
 One split, historically inspected validation, no private test and repeated descriptions across different IDs. Performance on unseen embeddings alone was substantially lower; that distinction is reported.
@@ -576,6 +570,6 @@ The real-data run now reproduces the archived metrics. A sensible next experimen
 5. Calculate percentiles using a short reference array, including a tie and a missing observation.
 6. Interpret an overconfident bin and a bin with few records in the reliability plot.
 7. Try answering the questions without reading. For every method, explain what it receives, what it learns and what it returns.
-8. Follow the instructor's actual submission instructions for the clean notebook and required files. The annotated copy and this guide are study materials unless requested otherwise.
+8. Follow the submission instructions for the clean notebook and required files. The annotated copy and this guide are study materials unless requested otherwise.
 
 A useful explanation distinguishes **why a choice is reasonable**, **what was measured**, **what remains unproven** and **how it could be checked**. It does not require treating every choice as the only possible one.

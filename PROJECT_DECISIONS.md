@@ -117,3 +117,7 @@ The attached skeleton matches the archived source. Both final notebooks restore 
 The professor-facing report follows the supplied assignment. Personal presentation preferences are not course requirements. README presentation metadata and the historical personal 85% target discussion in the study guide have been removed. Academic wording is assessed for clarity and evidence. ML code, recorded outputs and numerical execution provenance remain unchanged.
 
 Validation for this correction passed: exact original heading sequence in both notebooks, notebook schema validation, unchanged complete code-cell objects and real-data outputs, unchanged archives, and synthetic baseline/final equivalence within 1e-10. No course-data retraining was performed.
+
+## Report-audience wording correction
+
+Removed bonus eligibility/cutoff commentary from the current notebooks, README and study guide. Scoring-example prose now describes the calculation directly rather than discussing source preservation or addressing the reader about the teaching staff. Original section headings, the 0.8 human-review policy, scientific limitations, executable cells and real-data outputs remain unchanged. Historical execution metadata and archives remain intact.

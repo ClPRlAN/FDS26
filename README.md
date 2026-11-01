@@ -2,9 +2,9 @@
 
 **Verified assignment validation score: 67.50%.** The final financial-calibrated ensemble obtains **78.09% classification weighted F1** and **0.135585 Brier** on **3,171 validation records**. The notebooks now contain genuine outputs from the supplied course datasets.
 
-## Which metric is graded?
+## Evaluation metric
 
-The optional bonus uses the instructor's exact function:
+We evaluated confidence using `confidence_score`:
 
 **assignment score = weighted F1 × (1 − Brier)**
 
@@ -14,13 +14,11 @@ The other numbers answer different questions:
 
 | Metric/output | Purpose |
 |---|---|
-| **67.50% assignment score** | Local estimate of the bonus metric for the final model. |
+| **67.50% assignment score** | Confidence-weighted validation metric for the final model. |
 | **78.09% weighted F1** | Classification component of the final ensemble's score. |
 | Macro F1 and accuracy | Additional diagnostics, including minority-class performance. |
 | LR/k-NN comparison | Mandatory comparison of the two required classifiers. |
-| Original skeleton example | Instructor-provided illustration; separate from the final candidate. |
-
-The final bonus cutoff **will exceed 66% and will be set after all submissions are evaluated on the private test set**. Neither that cutoff nor our private-test result is known. A local score above 66% does not establish that the bonus has been earned. The complete assignment grade also depends on the required analyses and the instructor's assessment.
+| Original skeleton example | Scoring illustration; separate from the final candidate. |
 
 ## Files
 
@@ -34,7 +32,7 @@ The final bonus cutoff **will exceed 66% and will be set after all submissions a
 | `archive/` | Untouched original implementation/output, its explanation and the supplied skeleton. |
 | `tests/verify_project.py` | Synthetic regression and edge-case checks, separate from the submission. |
 
-For manual submission to the private course repository, use the clean notebook and any supporting files the instructor requests. This repository is `ClPRlAN/FDS26`; a push here does not submit work to the separate private course repository. The annotated notebook and guide provide detailed explanations alongside the concise submission report.
+For manual submission to the private course repository, use the clean notebook and supporting files specified in the submission instructions. This repository is `ClPRlAN/FDS26`; a push here does not submit work to the separate private course repository. The annotated notebook and guide provide detailed explanations alongside the concise submission report.
 
 ## Run all cells
 
@@ -74,7 +72,7 @@ LR is the stronger required classifier. Voting adds about 0.31 percentage points
 
 The submission and study notebooks each completed **all 19 code cells**, with **8 plots** and **no errors**, from separate fresh kernels. The preserved original baseline was also rerun without changing its archived file. Baseline, submission and study predictions are identical; probabilities, PCA variance, calibration features and confidence match within `atol=rtol=1e-10` on the real data.
 
-The submission run including verification took **87.3 seconds in the Linux cloud**. Sampled summed runner-plus-kernel RSS peaked at **1,594,036,224 bytes (1.48 GiB)**. This is an upper bound that may count shared pages twice, not a precise exclusive-memory measurement. Runtime includes the retained instructor example and verification. The assignment requires training within **45 minutes on mid-tier hardware with 16 GB RAM**; the cloud result is not a benchmark on the student's laptop.
+The submission run including verification took **87.3 seconds in the Linux cloud**. Sampled summed runner-plus-kernel RSS peaked at **1,594,036,224 bytes (1.48 GiB)**. This is an upper bound that may count shared pages twice, not a precise exclusive-memory measurement. Runtime includes the scoring example and verification. The assignment requires training within **45 minutes on mid-tier hardware with 16 GB RAM**; the cloud result is not a benchmark on the student's laptop.
 
 Checks cover assignment coverage and original scorer/example preservation, class-column alignment, disjoint company IDs, finite normalized probabilities, full-validation inference without targets, bounded confidence, input order/immutability, missing/infinite ratios, median aggregation, empirical ties and the 19/20-observation profile cutoff. To repeat the synthetic regression checks:
 
@@ -102,4 +100,4 @@ Company IDs do not overlap across subsets, but 455 validation records share exac
 
 The uncertainty method uses empirical financial compatibility and binary logistic calibration. Compatibility is not a correctness probability or a formal combined p-value. Confidence below 0.8 flags 36.9% of validation records and captures 73.2% of errors; flagged cases remain in every score.
 
-The project was prepared with AI assistance. Use the annotated notebook and guide to understand the methods, explain the choices and discuss their limits independently. Private-test performance and bonus eligibility remain unverified.
+The project was prepared with AI assistance. Use the annotated notebook and guide to understand the methods, explain the choices and discuss their limits independently. Results describe local validation performance.
